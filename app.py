@@ -9,6 +9,9 @@ import uvicorn
 # Importar módulos de ORION
 from orion_db import OrionDB, inicializar_proyectos_portfolio
 from orion_logger import get_logger, read_logs, get_all_logs_summary
+from orion_git import GitManager, scan_portfolio_git_repos
+from orion_system import SystemMonitor, PortMonitor, ProcessMonitor, get_system_summary
+from orion_generator import ProjectGenerator
 
 # Inicializar FastAPI
 app = FastAPI(title="ORION", description="Sistema de Gestión de Proyectos Flask")
@@ -17,9 +20,10 @@ app = FastAPI(title="ORION", description="Sistema de Gestión de Proyectos Flask
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Inicializar base de datos y logger
+# Inicializar base de datos, logger y generador
 db = OrionDB()
 logger = get_logger("orion")
+generator = ProjectGenerator()
 
 
 # ==================== STARTUP ====================
@@ -179,6 +183,182 @@ async def api_logs(proyecto: str, limit: int = 100):
     try:
         logs = read_logs(proyecto, limit=limit)
         return {"success": True, "proyecto": proyecto, "logs": logs}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== PUERTOS ====================
+@app.get("/puertos", response_class=HTMLResponse)
+async def monitor_puertos(request: Request):
+    """Monitor de puertos del sistema"""
+    try:
+        proyectos = db.listar_proyectos()
+        listening_ports = PortMonitor.get_listening_ports()
+        project_ports = PortMonitor.get_project_ports(proyectos)
+
+        return templates.TemplateResponse("puertos.html", {
+            "request": request,
+            "listening_ports": listening_ports,
+            "project_ports": project_ports,
+            "total_listening": len(listening_ports)
+        })
+    except Exception as e:
+        logger.log_error_exception(e, "monitor de puertos")
+        return HTMLResponse(f"Error: {str(e)}", status_code=500)
+
+
+@app.get("/api/puertos")
+async def api_puertos():
+    """API: Obtener información de puertos"""
+    try:
+        proyectos = db.listar_proyectos()
+        return {
+            "success": True,
+            "listening_ports": PortMonitor.get_listening_ports(),
+            "project_ports": PortMonitor.get_project_ports(proyectos)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== GIT ====================
+@app.get("/git", response_class=HTMLResponse)
+async def git_dashboard(request: Request):
+    """Dashboard de gestión Git"""
+    try:
+        proyectos = db.listar_proyectos()
+        git_repos = []
+
+        for proyecto in proyectos:
+            git_manager = GitManager(proyecto['ruta'])
+            if git_manager.is_git_repo():
+                status = git_manager.get_git_status()
+                commits = git_manager.get_recent_commits(limit=5)
+                git_repos.append({
+                    "proyecto": proyecto,
+                    "status": status,
+                    "commits": commits
+                })
+
+        return templates.TemplateResponse("git.html", {
+            "request": request,
+            "repos": git_repos
+        })
+    except Exception as e:
+        logger.log_error_exception(e, "git dashboard")
+        return HTMLResponse(f"Error: {str(e)}", status_code=500)
+
+
+@app.get("/api/git/{proyecto}")
+async def api_git_status(proyecto: str):
+    """API: Estado Git de un proyecto"""
+    try:
+        project_info = db.obtener_proyecto(proyecto)
+        if not project_info:
+            return {"success": False, "error": "Proyecto no encontrado"}
+
+        git_manager = GitManager(project_info['ruta'])
+        status = git_manager.get_git_status()
+        commits = git_manager.get_recent_commits(limit=10)
+        branches = git_manager.get_branches()
+
+        return {
+            "success": True,
+            "status": status,
+            "commits": commits,
+            "branches": branches
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== GENERADOR DE PROYECTOS ====================
+@app.get("/generar", response_class=HTMLResponse)
+async def generador_proyectos(request: Request):
+    """Interfaz de generador de proyectos"""
+    try:
+        available_ports = generator.get_available_ports()
+        suggested_port = generator.suggest_port()
+
+        return templates.TemplateResponse("generar.html", {
+            "request": request,
+            "available_ports": available_ports[:10],
+            "suggested_port": suggested_port
+        })
+    except Exception as e:
+        logger.log_error_exception(e, "generador de proyectos")
+        return HTMLResponse(f"Error: {str(e)}", status_code=500)
+
+
+@app.post("/api/generar")
+async def api_generar_proyecto(
+    nombre: str = Form(...),
+    puerto: int = Form(...),
+    descripcion: str = Form(""),
+    with_database: bool = Form(False),
+    with_api: bool = Form(True),
+    with_templates: bool = Form(True)
+):
+    """API: Generar nuevo proyecto Flask"""
+    try:
+        result = generator.create_flask_project(
+            project_name=nombre,
+            port=puerto,
+            description=descripcion,
+            with_database=with_database,
+            with_api=with_api,
+            with_templates=with_templates
+        )
+
+        if result['success']:
+            # Registrar en base de datos
+            try:
+                db.agregar_proyecto(
+                    nombre=result['project_name'],
+                    ruta=result['project_path'],
+                    descripcion=descripcion,
+                    puerto=puerto,
+                    tipo="Flask",
+                    tecnologias="Flask, ORION Logger"
+                )
+                logger.info(f"Proyecto '{nombre}' generado y registrado", puerto=puerto)
+            except Exception as e:
+                logger.warning(f"Proyecto generado pero no registrado en BD: {str(e)}")
+
+        return JSONResponse(result)
+    except Exception as e:
+        logger.log_error_exception(e, "generar proyecto")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+# ==================== SISTEMA ====================
+@app.get("/sistema", response_class=HTMLResponse)
+async def sistema_monitor(request: Request):
+    """Monitor del sistema"""
+    try:
+        system_info = get_system_summary()
+        top_cpu = ProcessMonitor.get_top_processes(limit=10, sort_by='cpu')
+        top_memory = ProcessMonitor.get_top_processes(limit=10, sort_by='memory')
+
+        return templates.TemplateResponse("sistema.html", {
+            "request": request,
+            "system": system_info,
+            "top_cpu": top_cpu,
+            "top_memory": top_memory
+        })
+    except Exception as e:
+        logger.log_error_exception(e, "sistema monitor")
+        return HTMLResponse(f"Error: {str(e)}", status_code=500)
+
+
+@app.get("/api/sistema")
+async def api_sistema():
+    """API: Información del sistema"""
+    try:
+        return {
+            "success": True,
+            "data": get_system_summary()
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

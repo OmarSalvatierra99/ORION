@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Generar Proyecto{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Generador de Proyectos Flask</h2>
+    <p style="color: var(--text-secondary);">Crea nuevos proyectos Flask con estructura completa y plantillas</p>
+</div>
+
+<div class="generator-container">
+    <!-- Formulario -->
+    <div class="form-card">
+        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">Configuración del Proyecto</h3>
+
+        <form id="generatorForm" onsubmit="handleSubmit(event)">
+            <!-- Nombre del Proyecto -->
+            <div class="form-group">
+                <label for="nombre">Nombre del Proyecto *</label>
+                <input
+                    type="text"
+                    id="nombre"
+                    name="nombre"
+                    class="form-input"
+                    placeholder="mi-proyecto-flask"
+                    required
+                    pattern="[a-z0-9-]+"
+                    title="Solo minúsculas, números y guiones"
+                />
+                <small style="color: var(--text-tertiary);">Solo minúsculas, números y guiones</small>
+            </div>
+
+            <!-- Puerto -->
+            <div class="form-group">
+                <label for="puerto">Puerto *</label>
+                <input
+                    type="number"
+                    id="puerto"
+                    name="puerto"
+                    class="form-input"
+                    value="{{ suggested_port }}"
+                    min="1024"
+                    max="65535"
+                    required
+                />
+                <small style="color: var(--text-tertiary);">Puerto sugerido: {{ suggested_port }}</small>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea
+                    id="descripcion"
+                    name="descripcion"
+                    class="form-input"
+                    rows="3"
+                    placeholder="Descripción breve del proyecto"
+                ></textarea>
+            </div>
+
+            <!-- Opciones -->
+            <div class="form-group">
+                <label style="margin-bottom: 0.75rem; display: block;">Características</label>
+
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="with_templates" checked />
+                        <span>Sistema de Templates (Jinja2)</span>
+                    </label>
+
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="with_api" checked />
+                        <span>API REST Endpoints</span>
+                    </label>
+
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="with_database" />
+                        <span>Base de Datos (SQLite + SQLAlchemy)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Botón Submit -->
+            <button type="submit" class="btn-primary" id="submitBtn">
+                Generar Proyecto
+            </button>
+        </form>
+
+        <!-- Mensaje de resultado -->
+        <div id="resultMessage" style="display: none; margin-top: 1.5rem;"></div>
+    </div>
+
+    <!-- Información de Puertos Disponibles -->
+    <div class="info-card">
+        <h3 style="margin: 0 0 1rem 0; color: var(--text-primary);">Puertos Disponibles</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.875rem;">
+            Puertos disponibles para tu nuevo proyecto:
+        </p>
+
+        <div class="ports-grid">
+            {% for port in available_ports %}
+            <button
+                type="button"
+                class="port-badge"
+                onclick="document.getElementById('puerto').value = {{ port }}"
+            >
+                {{ port }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 6px;">
+            <h4 style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.875rem;">
+                Lo que se incluirá:
+            </h4>
+            <ul style="margin: 0; padding-left: 1.25rem; color: var(--text-primary); font-size: 0.875rem; line-height: 1.8;">
+                <li>Aplicación Flask configurada</li>
+                <li>Integración con ORION Logger</li>
+                <li>Entorno virtual (venv)</li>
+                <li>Repositorio Git inicializado</li>
+                <li>Templates HTML base</li>
+                <li>Archivos de configuración</li>
+                <li>README.md completo</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.generator-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 968px) {
+    .generator-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-card, .info-card {
+    background: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+textarea.form-input {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 1rem;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+}
+
+.port-badge {
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.port-badge:hover {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+}
+
+.alert-success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid #22c55e;
+    color: #22c55e;
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    color: #ef4444;
+}
+</style>
+
+<script>
+async function handleSubmit(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const submitBtn = document.getElementById('submitBtn');
+    const resultMessage = document.getElementById('resultMessage');
+
+    // Deshabilitar botón
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Generando...';
+
+    // Preparar datos
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch('/api/generar', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        // Mostrar resultado
+        resultMessage.style.display = 'block';
+
+        if (result.success) {
+            resultMessage.className = 'alert alert-success';
+            resultMessage.innerHTML = `
+                <strong>¡Proyecto creado exitosamente!</strong><br>
+                <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+                    Nombre: <strong>${result.project_name}</strong><br>
+                    Puerto: <strong>${result.port}</strong><br>
+                    Ruta: <code style="background: rgba(0,0,0,0.2); padding: 0.25rem 0.5rem; border-radius: 4px;">${result.project_path}</code>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <a href="/proyectos" style="color: inherit; text-decoration: underline;">Ver en Proyectos</a>
+                </div>
+            `;
+            form.reset();
+        } else {
+            resultMessage.className = 'alert alert-error';
+            resultMessage.innerHTML = `
+                <strong>Error al generar proyecto</strong><br>
+                <span style="font-size: 0.875rem;">${result.error}</span>
+            `;
+        }
+    } catch (error) {
+        resultMessage.style.display = 'block';
+        resultMessage.className = 'alert alert-error';
+        resultMessage.innerHTML = `
+            <strong>Error de conexión</strong><br>
+            <span style="font-size: 0.875rem;">${error.message}</span>
+        `;
+    } finally {
+        // Rehabilitar botón
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Generar Proyecto';
+    }
+}
+</script>
+{% endblock %}
