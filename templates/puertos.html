@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Monitor de Puertos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Monitor de Puertos</h2>
+    <p style="color: var(--text-secondary);">Gestión de puertos en uso y asignados a proyectos</p>
+</div>
+
+<!-- Estadísticas -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_listening }}</div>
+        <div class="stat-label">Puertos en Escucha</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ project_ports|length }}</div>
+        <div class="stat-label">Puertos de Proyectos</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ project_ports|selectattr('is_active')|list|length }}</div>
+        <div class="stat-label">Proyectos Activos</div>
+    </div>
+</div>
+
+<!-- Puertos de Proyectos -->
+<div class="section">
+    <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Puertos de Proyectos</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Proyecto</th>
+                    <th>Puerto</th>
+                    <th>Estado</th>
+                    <th>Proceso</th>
+                    <th>PID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for port in project_ports %}
+                <tr>
+                    <td>
+                        <a href="/proyecto/{{ port.project }}/detalle" style="color: var(--accent-primary); text-decoration: none;">
+                            {{ port.project }}
+                        </a>
+                    </td>
+                    <td><span class="badge" style="background: var(--bg-secondary);">{{ port.port }}</span></td>
+                    <td>
+                        {% if port.is_active %}
+                        <span class="badge badge-success">ACTIVO</span>
+                        {% else %}
+                        <span class="badge badge-error">INACTIVO</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ port.process or '-' }}</td>
+                    <td>{{ port.pid or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Todos los Puertos en Escucha -->
+<div class="section">
+    <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Todos los Puertos en Escucha</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Puerto</th>
+                    <th>Dirección</th>
+                    <th>Proceso</th>
+                    <th>PID</th>
+                    <th>Línea de Comando</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for port in listening_ports %}
+                <tr>
+                    <td><span class="badge" style="background: var(--bg-secondary);">{{ port.port }}</span></td>
+                    <td>{{ port.address }}</td>
+                    <td>{{ port.process }}</td>
+                    <td>{{ port.pid }}</td>
+                    <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <small style="color: var(--text-tertiary);">{{ port.cmdline }}</small>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-primary);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.section {
+    margin-bottom: 2.5rem;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.badge-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+</style>
+{% endblock %}

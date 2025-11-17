@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión Git{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Gestión Git de Proyectos</h2>
+    <p style="color: var(--text-secondary);">Control de versiones y repositorios</p>
+</div>
+
+<!-- Estadísticas -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ repos|length }}</div>
+        <div class="stat-label">Repositorios Git</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ repos|selectattr('status.is_clean')|list|length }}</div>
+        <div class="stat-label">Repositorios Limpios</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ repos|length - repos|selectattr('status.is_clean')|list|length }}</div>
+        <div class="stat-label">Con Cambios</div>
+    </div>
+</div>
+
+<!-- Repositorios -->
+{% for repo in repos %}
+<div class="repo-card">
+    <div class="repo-header">
+        <div>
+            <h3 style="margin: 0; color: var(--text-primary);">
+                <a href="/proyecto/{{ repo.proyecto.nombre }}/detalle" style="color: var(--accent-primary); text-decoration: none;">
+                    {{ repo.proyecto.nombre }}
+                </a>
+            </h3>
+            <p style="color: var(--text-tertiary); font-size: 0.875rem; margin: 0.25rem 0 0 0;">
+                {{ repo.proyecto.ruta }}
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            {% if repo.status.is_clean %}
+            <span class="badge badge-success">LIMPIO</span>
+            {% else %}
+            <span class="badge badge-warning">MODIFICADO</span>
+            {% endif %}
+
+            {% if repo.status.branch %}
+            <span class="badge" style="background: var(--bg-tertiary);">
+                {{ repo.status.branch }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="repo-body">
+        <!-- Estado Git -->
+        <div class="repo-section">
+            <h4 style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase;">
+                Estado
+            </h4>
+
+            {% if repo.status.last_commit %}
+            <div style="margin-bottom: 0.75rem;">
+                <span style="color: var(--text-tertiary); font-size: 0.875rem;">Último commit:</span>
+                <code style="background: var(--bg-tertiary); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
+                    {{ repo.status.last_commit }}
+                </code>
+            </div>
+            {% endif %}
+
+            {% if repo.status.remote_url %}
+            <div style="margin-bottom: 0.75rem;">
+                <span style="color: var(--text-tertiary); font-size: 0.875rem;">Remoto:</span>
+                <code style="background: var(--bg-tertiary); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">
+                    {{ repo.status.remote_url }}
+                </code>
+            </div>
+            {% endif %}
+
+            <!-- Archivos modificados -->
+            {% if repo.status.modified_files %}
+            <div style="margin-top: 1rem;">
+                <span style="color: var(--text-secondary); font-size: 0.875rem; font-weight: 600;">
+                    Archivos modificados ({{ repo.status.modified_files|length }}):
+                </span>
+                <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                    {% for file in repo.status.modified_files[:10] %}
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="file-status-badge status-{{ file.status }}">{{ file.status }}</span>
+                        <span style="color: var(--text-primary); font-size: 0.875rem; font-family: monospace;">
+                            {{ file.file }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    {% if repo.status.modified_files|length > 10 %}
+                    <span style="color: var(--text-tertiary); font-size: 0.875rem;">
+                        ... y {{ repo.status.modified_files|length - 10 }} más
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Commits recientes -->
+        {% if repo.commits %}
+        <div class="repo-section">
+            <h4 style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase;">
+                Commits Recientes
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for commit in repo.commits %}
+                <div style="display: flex; gap: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 4px;">
+                    <code style="color: var(--accent-primary); font-size: 0.875rem; flex-shrink: 0;">
+                        {{ commit.hash }}
+                    </code>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="color: var(--text-primary); font-size: 0.875rem;">{{ commit.message }}</div>
+                        <div style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">
+                            {{ commit.author }} · {{ commit.time }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% if not repos %}
+<div class="empty-state">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-primary);">No hay repositorios Git</h3>
+    <p style="color: var(--text-secondary); margin: 0;">
+        Los proyectos sin repositorio Git no aparecen aquí.
+    </p>
+</div>
+{% endif %}
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-primary);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.repo-card {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.repo-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.repo-body {
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.repo-section {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+    .repo-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.badge-warning {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+}
+
+.file-status-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.status-modified {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.status-added {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.status-deleted {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.status-untracked {
+    background: rgba(156, 163, 175, 0.1);
+    color: #9ca3af;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+</style>
+{% endblock %}

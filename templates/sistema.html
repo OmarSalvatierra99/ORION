@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Monitor del Sistema{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Monitor del Sistema</h2>
+    <p style="color: var(--text-secondary);">Rendimiento y recursos del servidor</p>
+</div>
+
+<!-- Estadísticas Generales -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">🖥️</div>
+        <div class="stat-value">{{ system.cpu.percent }}%</div>
+        <div class="stat-label">CPU</div>
+        <div class="stat-detail">{{ system.cpu.count }} núcleos</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">💾</div>
+        <div class="stat-value">{{ system.memory.percent }}%</div>
+        <div class="stat-label">Memoria</div>
+        <div class="stat-detail">{{ system.memory.used_gb }}/{{ system.memory.total_gb }} GB</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">💿</div>
+        <div class="stat-value">{{ system.disk[0].percent }}%</div>
+        <div class="stat-label">Disco</div>
+        <div class="stat-detail">{{ system.disk[0].used_gb }}/{{ system.disk[0].total_gb }} GB</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">⚙️</div>
+        <div class="stat-value">{{ system.process_count }}</div>
+        <div class="stat-label">Procesos</div>
+        <div class="stat-detail">{{ system.listening_ports_count }} puertos</div>
+    </div>
+</div>
+
+<!-- Información Detallada -->
+<div class="details-grid">
+    <!-- CPU y Memoria -->
+    <div class="detail-card">
+        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">Rendimiento</h3>
+
+        <div class="info-section">
+            <div class="info-label">CPU</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ system.cpu.percent }}%; background: {% if system.cpu.percent > 80 %}#ef4444{% elif system.cpu.percent > 60 %}#fbbf24{% else %}#22c55e{% endif %};"></div>
+            </div>
+            <div class="info-value">{{ system.cpu.percent }}%</div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-label">Memoria</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ system.memory.percent }}%; background: {% if system.memory.percent > 80 %}#ef4444{% elif system.memory.percent > 60 %}#fbbf24{% else %}#22c55e{% endif %};"></div>
+            </div>
+            <div class="info-value">{{ system.memory.percent }}% ({{ system.memory.used_gb }} GB / {{ system.memory.total_gb }} GB)</div>
+        </div>
+
+        {% for disk in system.disk %}
+        <div class="info-section">
+            <div class="info-label">Disco {{ disk.mountpoint }}</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ disk.percent }}%; background: {% if disk.percent > 80 %}#ef4444{% elif disk.percent > 60 %}#fbbf24{% else %}#22c55e{% endif %};"></div>
+            </div>
+            <div class="info-value">{{ disk.percent }}% ({{ disk.used_gb }} GB / {{ disk.total_gb }} GB)</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Información del Sistema -->
+    <div class="detail-card">
+        <h3 style="margin: 0 0 1.5rem 0; color: var(--text-primary);">Información</h3>
+
+        <div class="info-item">
+            <span class="info-key">Tiempo Activo:</span>
+            <span class="info-val">{{ system.uptime.uptime_str }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-key">Procesos Activos:</span>
+            <span class="info-val">{{ system.process_count }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-key">Puertos en Escucha:</span>
+            <span class="info-val">{{ system.listening_ports_count }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-key">Red (Enviado):</span>
+            <span class="info-val">{{ system.network.bytes_sent_mb }} MB</span>
+        </div>
+
+        <div class="info-item">
+            <span class="info-key">Red (Recibido):</span>
+            <span class="info-val">{{ system.network.bytes_recv_mb }} MB</span>
+        </div>
+
+        {% if system.cpu.freq %}
+        <div class="info-item">
+            <span class="info-key">Frecuencia CPU:</span>
+            <span class="info-val">{{ "%.2f"|format(system.cpu.freq.current) }} MHz</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Procesos Top por CPU -->
+<div class="processes-section">
+    <h3 style="margin: 0 0 1rem 0; color: var(--text-primary);">Top Procesos por CPU</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>PID</th>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>CPU %</th>
+                    <th>Memoria %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proc in top_cpu %}
+                <tr>
+                    <td>{{ proc.pid }}</td>
+                    <td><code>{{ proc.name }}</code></td>
+                    <td>{{ proc.username }}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="mini-progress">
+                                <div class="mini-progress-fill" style="width: {{ proc.cpu_percent }}%;"></div>
+                            </div>
+                            <span>{{ proc.cpu_percent }}%</span>
+                        </div>
+                    </td>
+                    <td>{{ proc.memory_percent }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Procesos Top por Memoria -->
+<div class="processes-section">
+    <h3 style="margin: 0 0 1rem 0; color: var(--text-primary);">Top Procesos por Memoria</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>PID</th>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>CPU %</th>
+                    <th>Memoria %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proc in top_memory %}
+                <tr>
+                    <td>{{ proc.pid }}</td>
+                    <td><code>{{ proc.name }}</code></td>
+                    <td>{{ proc.username }}</td>
+                    <td>{{ proc.cpu_percent }}%</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="mini-progress">
+                                <div class="mini-progress-fill" style="width: {{ proc.memory_percent }}%;"></div>
+                            </div>
+                            <span>{{ proc.memory_percent }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-primary);
+    text-align: center;
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.stat-detail {
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 968px) {
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.detail-card {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.info-section {
+    margin-bottom: 1.5rem;
+}
+
+.info-label {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.info-value {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.info-key {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.info-val {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.processes-section {
+    margin-bottom: 2rem;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.mini-progress {
+    width: 60px;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mini-progress-fill {
+    height: 100%;
+    background: var(--accent-primary);
+}
+</style>
+{% endblock %}

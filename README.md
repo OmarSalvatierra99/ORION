@@ -1,52 +1,61 @@
-# 🌟 ORION - Asistente Virtual Inteligente
+# 🌟 ORION - Sistema de Gestión de Proyectos Flask
 
-Sistema centralizado de gestión de proyectos y finanzas personales con **Inteligencia Artificial**.
+Sistema centralizado de gestión, generación y monitoreo de proyectos Flask con **control de Git** y **monitoreo de recursos**.
 
 ## 🚀 Características Principales
 
 ### 📊 Gestión de Proyectos
 - Monitoreo centralizado de proyectos del portfolio
+- **Generador automático de proyectos Flask** con plantillas completas
 - Sistema de logs en formato JSON
 - Control de estados (activo, detenido, error, mantenimiento)
 - Dashboard con estadísticas en tiempo real
 
-### 💰 Gestión Financiera con AI
-- **Análisis Inteligente de Deudas** powered by OpenAI GPT-4
-- Generación automática de planes de pago optimizados
-- Recomendaciones financieras personalizadas
-- Control de pagos y saldos
-- Alertas de vencimientos
+### 🔧 Generador de Proyectos
+- **Creación automática** de proyectos Flask con estructura completa
+- Plantillas HTML con Jinja2
+- Integración automática con ORION Logger
+- Configuración de base de datos SQLite (opcional)
+- Endpoints API REST (opcional)
+- Inicialización automática de Git
+- Entorno virtual incluido
+- **Sugerencia inteligente de puertos** disponibles
 
-### 💬 Asistente AI
-- Chat inteligente con contexto del sistema
-- Análisis de logs y debugging asistido
-- Sugerencias de optimización
+### 🔌 Monitor de Puertos
+- Visualización de todos los puertos en escucha
+- **Detección automática** de procesos por puerto
+- Estado de puertos asignados a proyectos
+- Identificación de conflictos de puertos
+- PID y comando de cada proceso
+
+### 📦 Gestión Git
+- **Estado de repositorios** en tiempo real
+- Commits recientes de cada proyecto
+- Archivos modificados por proyecto
+- Información de branches y remotos
+- Integración con GitHub
+- Detección de cambios sin commit
+
+### 💻 Monitor del Sistema
+- **Monitoreo en tiempo real** de CPU, memoria y disco
+- Listado de procesos top por CPU y memoria
+- Información de red (datos enviados/recibidos)
+- Tiempo de actividad del sistema
+- Estadísticas de recursos en vivo
 
 ## 📦 Instalación
 
 ### 1. Clonar y configurar entorno
 
 ```bash
-cd /home/gabo/ORION
+git clone <repository-url>
+cd ORION
+python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configurar Variables de Entorno
-
-Crea un archivo `.env` en la raíz del proyecto:
-
-```env
-# OpenAI API Key (Requerido para funcionalidades AI)
-OPENAI_API_KEY=tu_api_key_aqui
-```
-
-**Obtener OpenAI API Key:**
-1. Ir a https://platform.openai.com/api-keys
-2. Crear una nueva API key
-3. Copiar y pegar en `.env`
-
-### 3. Inicializar Base de Datos
+### 2. Inicializar Base de Datos
 
 ```bash
 python orion_db.py
@@ -57,7 +66,7 @@ Esto creará:
 - Registrará proyectos del portfolio
 - Inicializará tablas de deudas y actividad
 
-### 4. Ejecutar ORION
+### 3. Ejecutar ORION
 
 ```bash
 python app.py
@@ -65,52 +74,60 @@ python app.py
 
 ORION estará disponible en: **http://localhost:4090**
 
-## 🎯 Uso de Funcionalidades AI
+## 🎯 Uso de Funcionalidades
 
-### Análisis de Deudas con AI
+### 🆕 Generar un Nuevo Proyecto Flask
 
-1. Ir a http://localhost:4090/deudas
-2. Click en **"🤖 Análisis AI"**
-3. Ver análisis completo con:
-   - Evaluación de situación financiera
-   - Priorización de pagos (método avalancha/bola de nieve)
-   - Recomendaciones accionables
-   - Alertas de deudas vencidas
+1. Ir a **http://localhost:4090/generar**
+2. Ingresar:
+   - **Nombre del proyecto** (ej: `mi-api-rest`)
+   - **Puerto** (ORION sugiere automáticamente puertos disponibles)
+   - **Descripción** (opcional)
+   - **Características**: Templates, API, Base de Datos
+3. Click en **"Generar Proyecto"**
+4. El proyecto se crea automáticamente en `portfolio/projects/`
 
-### Plan de Pagos Inteligente
+**El proyecto generado incluye:**
+- ✅ Aplicación Flask configurada
+- ✅ Templates HTML base con diseño moderno
+- ✅ Integración con ORION Logger
+- ✅ Entorno virtual (venv)
+- ✅ Repositorio Git inicializado
+- ✅ README.md completo
+- ✅ .gitignore configurado
+- ✅ requirements.txt con dependencias
 
-1. En la tabla de deudas, click en **"Plan 📋"** en cualquier deuda
-2. La AI generará automáticamente:
-   - Plazo recomendado
-   - Monto mensual sugerido
-   - Calendario de pagos detallado
-   - Consejos personalizados
+### 📊 Monitor de Puertos
 
-### Chat con Asistente AI
+1. Ir a **http://localhost:4090/puertos**
+2. Ver:
+   - Puertos asignados a tus proyectos
+   - Estado (ACTIVO/INACTIVO)
+   - Proceso que ocupa cada puerto
+   - Todos los puertos en escucha del sistema
 
-```bash
-curl -X POST http://localhost:4090/api/chat \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "mensaje=¿Cómo puedo optimizar el pago de mis deudas?"
-```
+### 🔄 Gestión Git
+
+1. Ir a **http://localhost:4090/git**
+2. Ver para cada proyecto:
+   - Branch actual
+   - Último commit
+   - Archivos modificados
+   - Commits recientes
+   - URL remota de GitHub
+
+### 💻 Monitor del Sistema
+
+1. Ir a **http://localhost:4090/sistema**
+2. Monitorear:
+   - Uso de CPU y memoria
+   - Espacio en disco
+   - Procesos top por CPU/memoria
+   - Red y estadísticas del sistema
 
 ## 🛠️ API Endpoints
 
-### Endpoints AI
-
-```bash
-# Obtener análisis de deudas
-GET /deudas/analisis
-
-# Generar plan de pago para una deuda
-GET /deudas/{deuda_id}/plan-pago
-
-# Chat con AI
-POST /api/chat
-  Body: mensaje=tu_pregunta_aqui
-```
-
-### Endpoints de Sistema
+### Gestión de Proyectos
 
 ```bash
 # Estado del sistema
@@ -119,80 +136,166 @@ GET /api/status
 # Listar proyectos
 GET /api/proyectos
 
-# Listar deudas
-GET /api/deudas
+# Estado de un proyecto
+GET /proyecto/{nombre}/detalle
+
+# Actualizar estado de proyecto
+POST /api/proyecto/{nombre}/estado
+  Body: estado=activo
 
 # Logs de proyecto
 GET /api/logs/{proyecto}?limit=100
 ```
 
+### Generador de Proyectos
+
+```bash
+# Generar nuevo proyecto Flask
+POST /api/generar
+  Body:
+    nombre=mi-proyecto
+    puerto=5100
+    descripcion=Mi nuevo proyecto
+    with_database=true
+    with_api=true
+    with_templates=true
+```
+
+### Monitor de Puertos
+
+```bash
+# Obtener información de puertos
+GET /api/puertos
+
+# Respuesta:
+{
+  "listening_ports": [...],
+  "project_ports": [...]
+}
+```
+
+### Gestión Git
+
+```bash
+# Estado Git de un proyecto
+GET /api/git/{proyecto}
+
+# Respuesta:
+{
+  "status": {...},
+  "commits": [...],
+  "branches": [...]
+}
+```
+
+### Monitor del Sistema
+
+```bash
+# Información del sistema
+GET /api/sistema
+
+# Respuesta:
+{
+  "cpu": {...},
+  "memory": {...},
+  "disk": [...],
+  "network": {...}
+}
+```
+
 ## 📁 Estructura del Proyecto
 
 ```
-/home/gabo/ORION/
+ORION/
 ├── app.py                      # FastAPI app principal
 ├── orion_db.py                 # Gestor de base de datos
 ├── orion_logger.py             # Sistema de logging
-├── orion_ai.py                 # 🆕 Integración OpenAI
-├── .env                        # Variables de entorno
+├── orion_git.py                # 🆕 Gestor de Git
+├── orion_system.py             # 🆕 Monitor de sistema
+├── orion_generator.py          # 🆕 Generador de proyectos
 ├── orion.db                    # Base de datos SQLite
+├── requirements.txt            # Dependencias Python
 ├── logs/                       # Logs JSON de proyectos
 ├── templates/                  # Templates HTML
-│   ├── deudas.html            # Vista principal de deudas
-│   ├── deudas_analisis.html   # 🆕 Análisis AI
-│   └── plan_pago.html         # 🆕 Plan de pagos
+│   ├── base.html              # Template base
+│   ├── index.html             # Dashboard
+│   ├── proyectos.html         # Lista de proyectos
+│   ├── generar.html           # 🆕 Generador de proyectos
+│   ├── puertos.html           # 🆕 Monitor de puertos
+│   ├── git.html               # 🆕 Gestión Git
+│   ├── sistema.html           # 🆕 Monitor de sistema
+│   ├── proyecto_logs.html     # Visor de logs
+│   └── proyecto_detalle.html  # Detalle de proyecto
 ├── static/                     # Archivos estáticos
-├── portfolio/projects/         # Proyectos del portfolio
+│   ├── css/style.css          # Estilos
+│   └── js/app.js              # JavaScript
+├── portfolio/projects/         # 🆕 Proyectos generados
 └── venv/                       # Entorno virtual
 ```
 
 ## 🔧 Configuración Avanzada
 
-### Cambiar modelo de OpenAI
+### Personalizar Plantillas de Proyectos
 
-Editar `orion_ai.py`:
+Edita `orion_generator.py` para modificar:
+- Estructura de archivos generados
+- Templates HTML base
+- Configuración de Flask
+- Dependencias por defecto
+
+### Cambiar Puerto de ORION
+
+Edita `app.py` (última línea):
 ```python
-self.model = "gpt-4"  # Para análisis más profundos
-# o
-self.model = "gpt-4o-mini"  # Para respuestas más rápidas y económicas (default)
+uvicorn.run(app, host="0.0.0.0", port=4090)  # Cambiar 4090
+```
+
+### Personalizar Ruta de Proyectos
+
+Por defecto: `portfolio/projects/`
+
+Edita `orion_generator.py`:
+```python
+def __init__(self, portfolio_path: str = "tu/ruta/personalizada"):
 ```
 
 ## 🐛 Solución de Problemas
 
-### OpenAI no funciona
+### Error "psutil not found"
 
 ```bash
-# Verificar que la API key esté configurada
-cat .env | grep OPENAI_API_KEY
-
-# Probar conexión
-python -c "from orion_ai import get_orion_ai; ai = get_orion_ai(); print('✓ OK')"
+pip install psutil==5.9.6
 ```
 
-### Error "OrionAI no disponible"
+### Proyectos no aparecen en Git
 
-1. Verificar que `OPENAI_API_KEY` esté en `.env`
-2. Instalar dependencias: `pip install openai python-dotenv`
-3. Reiniciar ORION: `python app.py`
+Verifica que los proyectos tengan repositorio Git inicializado:
+```bash
+cd portfolio/projects/tu-proyecto
+git status
+```
 
-## 📊 Costos de API
+### Puerto ya en uso
 
-### OpenAI (GPT-4o-mini)
-- Análisis de deudas: ~$0.002 por análisis
-- Plan de pagos: ~$0.001 por plan
-- Chat: ~$0.0005 por pregunta
-
-**Estimado mensual** (uso moderado): ~$0.50 - $2.00 USD
-
-## 🔒 Seguridad
-
-- ✅ `.env` excluido de git
-- ✅ API keys nunca expuestas en código
+1. Ir a **Monitor de Puertos** para identificar el proceso
+2. Cambiar puerto del proyecto o detener el proceso conflictivo
 
 ## 📚 Recursos
 
-- [Documentación OpenAI](https://platform.openai.com/docs)
 - [FastAPI Docs](https://fastapi.tiangolo.com)
+- [Flask Documentation](https://flask.palletsprojects.com)
+- [psutil Documentation](https://psutil.readthedocs.io)
+
+## 🎨 Funcionalidades del Dashboard
+
+### Páginas Disponibles
+
+1. **Dashboard** (`/`) - Resumen general del sistema
+2. **Proyectos** (`/proyectos`) - Lista y gestión de proyectos
+3. **Generar** (`/generar`) - Crear nuevos proyectos Flask
+4. **Puertos** (`/puertos`) - Monitor de puertos del sistema
+5. **Git** (`/git`) - Estado de repositorios
+6. **Sistema** (`/sistema`) - Monitor de recursos
 
 ## 🤝 Contribuir
 
@@ -200,5 +303,5 @@ Para más detalles técnicos, ver `CLAUDE.md` y `ORION_GUIDE.md`.
 
 ---
 
-**ORION** - Tu asistente inteligente para proyectos y finanzas
-*Desarrollado con FastAPI y OpenAI GPT-4*
+**ORION** - Sistema completo de gestión de proyectos Flask
+*Desarrollado con FastAPI, Flask y Python*
