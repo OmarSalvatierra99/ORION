@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+*.env
+config.json
+secrets.json
+credentials.json
+google_credentials.json
+token.json
+
+# Logs
+*.log
+
+# Portfolio directory (según README.md)
+portfolio/
+
+# Claude temporary files
+.claude/

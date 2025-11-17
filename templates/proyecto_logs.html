@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}{{ proyecto.nombre }} - Logs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .logs-panel {
+        background: var(--gray-900);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        color: var(--gray-100);
+        font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+        font-size: 0.8rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .log-entry {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-left: 2px solid;
+        padding-left: 1rem;
+        line-height: 1.6;
+    }
+
+    .log-INFO { border-left-color: var(--info); }
+    .log-WARNING { border-left-color: var(--warning); }
+    .log-ERROR { border-left-color: var(--error); }
+    .log-DEBUG { border-left-color: var(--gray-500); }
+    .log-CRITICAL {
+        border-left-color: var(--error);
+        background: rgba(244, 67, 54, 0.1);
+    }
+
+    .log-timestamp {
+        color: var(--gray-400);
+        margin-right: 1rem;
+    }
+
+    .log-level {
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+
+    .log-level-INFO { color: var(--info); }
+    .log-level-WARNING { color: var(--warning); }
+    .log-level-ERROR { color: var(--error); }
+    .log-level-DEBUG { color: var(--gray-500); }
+    .log-level-CRITICAL { color: var(--error); }
+
+    .log-message {
+        color: var(--gray-100);
+    }
+
+    .filter-controls {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.8rem;
+        color: var(--text-primary);
+    }
+
+    .filter-btn.active {
+        background: var(--gray-900);
+        color: white;
+        border-color: var(--gray-900);
+    }
+
+    .filter-btn:hover {
+        border-color: var(--gray-400);
+    }
+
+    .refresh-btn {
+        padding: 0.5rem 1rem;
+        background: var(--gray-900);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.8rem;
+        transition: background 0.2s;
+    }
+
+    .refresh-btn:hover {
+        background: var(--gray-800);
+    }
+
+    .back-btn {
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        padding: 0.5rem 1rem;
+        background: var(--background-alt);
+        color: var(--text-primary);
+        text-decoration: none;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        font-weight: 500;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+    }
+
+    .back-btn:hover {
+        box-shadow: var(--shadow-sm);
+        border-color: var(--gray-300);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/proyectos" class="back-btn">← Back to Projects</a>
+
+<div class="page-header-section">
+    <h1 class="page-title">{{ proyecto.nombre }} Logs</h1>
+    <p class="page-subtitle">{{ logs|length }} entries · Real-time updates</p>
+</div>
+
+<div class="filter-controls">
+    <button class="filter-btn active" data-level="all">All</button>
+    <button class="filter-btn" data-level="INFO">INFO</button>
+    <button class="filter-btn" data-level="WARNING">WARNING</button>
+    <button class="filter-btn" data-level="ERROR">ERROR</button>
+    <button class="filter-btn" data-level="CRITICAL">CRITICAL</button>
+    <button class="refresh-btn" onclick="location.reload()">↻ Refresh</button>
+</div>
+
+<div class="logs-panel" id="logsPanel">
+    {% if logs %}
+        {% for log in logs %}
+        <div class="log-entry log-{{ log.level }}" data-level="{{ log.level }}">
+            <span class="log-timestamp">{{ log.timestamp }}</span>
+            <span class="log-level log-level-{{ log.level }}">{{ log.level }}</span>
+            <span class="log-message">{{ log.message }}</span>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; color: var(--gray-500); padding: 2rem;">
+            No logs available for this project
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Log filtering
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const logEntries = document.querySelectorAll('.log-entry');
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const level = btn.dataset.level;
+
+            // Update active buttons
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Filter logs
+            logEntries.forEach(entry => {
+                if (level === 'all' || entry.dataset.level === level) {
+                    entry.style.display = 'block';
+                } else {
+                    entry.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Auto-scroll to bottom
+    const logsPanel = document.getElementById('logsPanel');
+    logsPanel.scrollTop = logsPanel.scrollHeight;
+</script>
+{% endblock %}
