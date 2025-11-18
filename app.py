@@ -17,7 +17,7 @@ from core.logger import logger, get_logs_summary
 from core.project_manager import project_manager
 
 # Routers
-from routers import projects, api
+from routers import projects, api, services
 
 # ==================== APLICACIÓN ====================
 
@@ -34,6 +34,7 @@ templates = Jinja2Templates(directory="templates")
 # Incluir routers
 app.include_router(projects.router)
 app.include_router(api.router)
+app.include_router(services.router)
 
 
 # ==================== STARTUP ====================
