@@ -106,10 +106,26 @@ Simplified JSON logging system:
 ### **core/project_manager.py** ⭐ NEW
 The heart of project management:
 
-**Discovery:**
+**Discovery & Analysis:**
 - `discover_projects()` - Auto-discover projects in portfolio directory
+- `_analyze_project(path)` - Deep analysis of project structure and app.py
+- `_analyze_app_file(app_file, project_type)` - ⭐ Analyze app.py in depth
+  - Extracts endpoints/routes (Flask @app.route, FastAPI @app.get/post/etc.)
+  - Detects imports and dependencies
+  - Identifies features (database, authentication)
+  - Extracts description from docstrings
 - `read_requirements(path)` - Parse requirements.txt
 - `get_requirements_info(name)` - Get detailed dependency info
+
+**What app.py Analysis Detects:**
+- 🌐 **Endpoints**: All HTTP routes with methods (GET, POST, PUT, DELETE, etc.)
+- 📚 **Imports**: All imported modules and packages
+- 📝 **Description**: Docstring from the beginning of the file
+- 🔧 **Features**:
+  - Database usage (SQLAlchemy, sqlite, mysql, postgres, mongodb)
+  - Authentication (JWT, login, session, token)
+- 🔌 **Port**: Automatically detected from app.run() or uvicorn.run()
+- 🏷️ **Framework**: Flask, FastAPI, Django, or generic Python
 
 **Control:**
 - `start_project(name)` - Start project subprocess
@@ -151,7 +167,11 @@ Project management endpoints:
 REST API endpoints (all under `/api`):
 - `GET /api/status` - System status
 - `GET /api/proyectos` - List all projects (JSON)
-- `GET /api/proyecto/{nombre}` - Get project info + requirements
+- `GET /api/proyecto/{nombre}` - Get project info + requirements + analysis
+- `GET /api/proyecto/{nombre}/analysis` - ⭐ Get detailed app.py analysis
+  - Returns: endpoints, imports, description, features (database, auth)
+  - Analyzes Flask routes (@app.route, @app.get/post/etc.)
+  - Analyzes FastAPI routes (@app.get/post, @router.get/post/etc.)
 - `GET /api/proyecto/{nombre}/logs` - Get project logs (JSON)
 - `GET /api/proyecto/{nombre}/status` - Real-time project status
 - `GET /api/proyecto/{nombre}/requirements` - Project dependencies
@@ -225,6 +245,36 @@ print(req_info)
 # }
 ```
 
+### Analyze app.py in Depth ⭐ NEW
+
+```python
+from core.project_manager import project_manager
+from pathlib import Path
+
+# Analyze a specific project
+project_path = Path("portfolio/projects/my-api")
+analysis = project_manager._analyze_project(project_path)
+
+print(f"Type: {analysis['tipo']}")
+print(f"Port: {analysis['puerto']}")
+print(f"Description: {analysis['descripcion']}")
+
+# Endpoints discovered
+print(f"\nEndpoints ({len(analysis['endpoints'])}):")
+for endpoint in analysis['endpoints']:
+    print(f"  {endpoint['method']} {endpoint['path']}")
+
+# Imports detected
+print(f"\nImports ({len(analysis['imports'])}):")
+for imp in analysis['imports'][:10]:
+    print(f"  • {imp}")
+
+# Features
+print(f"\nFeatures:")
+print(f"  Database: {analysis['has_database']}")
+print(f"  Authentication: {analysis['has_auth']}")
+```
+
 ### Auto-Discover Projects
 
 ```python
@@ -249,11 +299,17 @@ curl http://localhost:4090/api/status
 # List all projects
 curl http://localhost:4090/api/proyectos
 
-# Get project with requirements
+# Get project with requirements and analysis
 curl http://localhost:4090/api/proyecto/chat
+
+# Get detailed app.py analysis (NEW)
+curl http://localhost:4090/api/proyecto/chat/analysis
 
 # Get project logs
 curl http://localhost:4090/api/proyecto/chat/logs?limit=50
+
+# Get project status (CPU, memory, PID)
+curl http://localhost:4090/api/proyecto/chat/status
 
 # Start a project
 curl -X POST http://localhost:4090/proyecto/chat/start
