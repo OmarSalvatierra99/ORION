@@ -17,7 +17,7 @@ from core.logger import logger, get_logs_summary
 from core.project_manager import project_manager
 
 # Routers
-from routers import projects, api, system
+from routers import projects, api
 
 # ==================== APLICACIÓN ====================
 
@@ -34,7 +34,6 @@ templates = Jinja2Templates(directory="templates")
 # Incluir routers
 app.include_router(projects.router)
 app.include_router(api.router)
-app.include_router(system.router)
 
 
 # ==================== STARTUP ====================
@@ -58,14 +57,10 @@ async def startup_event():
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    """Dashboard principal de ORION"""
+    """Dashboard principal de ORION - Lista de proyectos"""
     try:
-        # Estadísticas
-        stats = db.get_stats()
-        logs_summary = get_logs_summary()
-
-        # Proyectos recientes (primeros 6)
-        proyectos = db.list_projects()[:6]
+        # Obtener todos los proyectos
+        proyectos = db.list_projects()
 
         # Enriquecer con estado real
         for proyecto in proyectos:
@@ -77,14 +72,13 @@ async def dashboard(request: Request):
 
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "stats": stats,
-            "proyectos": proyectos,
-            "logs_count": len(logs_summary)
+            "proyectos": proyectos
         })
     except Exception as e:
         logger.error(f"Error en dashboard: {str(e)}")
         return templates.TemplateResponse("index.html", {
             "request": request,
+            "proyectos": [],
             "error": str(e)
         })
 

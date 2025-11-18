@@ -3,53 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ORION{% endblock %} - Project Management</title>
+    <title>{% block title %}ORION{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h1 class="orion-title">ORION</h1>
-                    <p class="subtitle">Project Management System</p>
-                </div>
-                <nav style="display: flex; gap: 1.5rem; font-size: 0.875rem;">
-                    <a href="/" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Dashboard</a>
-                    <a href="/proyectos" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Proyectos</a>
-                    <a href="/generar" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Generar</a>
-                    <a href="/puertos" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Puertos</a>
-                    <a href="/git" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Git</a>
-                    <a href="/sistema" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Sistema</a>
-                </nav>
-            </div>
+            <a href="/" style="text-decoration: none; color: inherit;">
+                <h1 class="orion-title">ORION</h1>
+            </a>
         </header>
 
-        <!-- Main Content -->
         <main class="main-panel">
             {% block content %}{% endblock %}
         </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="status-indicators">
-                <span class="indicator">
-                    <span class="dot online"></span>
-                    System Online
-                </span>
-                <span class="indicator">
-                    <span class="dot online"></span>
-                    Database Connected
-                </span>
-                <span class="indicator" style="color: var(--text-tertiary);">
-                    ORION v2.0
-                </span>
-            </div>
-        </footer>
     </div>
-
-    {% block extra_js %}{% endblock %}
 </body>
 </html>

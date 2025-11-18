@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}{{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="project-detail">
+    <!-- Encabezado del proyecto -->
+    <div class="detail-header">
+        <div>
+            <h2>{{ proyecto.nombre }}</h2>
+            <p class="project-path">{{ proyecto.ruta }}</p>
+        </div>
+        <div class="project-controls">
+            {% if proyecto.is_running %}
+                <button class="btn btn-danger" onclick="controlProject('{{ proyecto.nombre }}', 'stop')">Detener</button>
+                <button class="btn btn-warning" onclick="controlProject('{{ proyecto.nombre }}', 'restart')">Reiniciar</button>
+            {% else %}
+                <button class="btn btn-success" onclick="controlProject('{{ proyecto.nombre }}', 'start')">Iniciar</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Información del puerto -->
+    <div class="info-section">
+        <h3>Información</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Estado:</span>
+                <span class="project-status {% if proyecto.is_running %}status-active{% else %}status-inactive{% endif %}">
+                    {{ "Activo" if proyecto.is_running else "Detenido" }}
+                </span>
+            </div>
+            {% if proyecto.puerto %}
+            <div class="info-item">
+                <span class="info-label">Puerto:</span>
+                <span>{{ proyecto.puerto }}</span>
+            </div>
+            {% endif %}
+            {% if proyecto.pid %}
+            <div class="info-item">
+                <span class="info-label">PID:</span>
+                <span>{{ proyecto.pid }}</span>
+            </div>
+            {% endif %}
+            {% if proyecto.cpu_percent is not none %}
+            <div class="info-item">
+                <span class="info-label">CPU:</span>
+                <span>{{ "%.1f"|format(proyecto.cpu_percent) }}%</span>
+            </div>
+            {% endif %}
+            {% if proyecto.memory_mb is not none %}
+            <div class="info-item">
+                <span class="info-label">Memoria:</span>
+                <span>{{ "%.1f"|format(proyecto.memory_mb) }} MB</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="info-section">
+        <h3>Logs Recientes</h3>
+        {% if logs %}
+        <div class="logs-container">
+            {% for log in logs %}
+            <div class="log-entry log-{{ log.level.lower() }}">
+                <span class="log-time">{{ log.timestamp }}</span>
+                <span class="log-level">{{ log.level }}</span>
+                <span class="log-message">{{ log.message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="/proyecto/{{ proyecto.nombre }}/logs" class="btn-link">Ver todos los logs</a>
+        {% else %}
+        <p class="empty-state">No hay logs disponibles</p>
+        {% endif %}
+    </div>
+
+    <!-- Git Status -->
+    {% if git_status and not git_status.get('error') %}
+    <div class="info-section">
+        <h3>Git Status</h3>
+        <div class="git-info">
+            <div class="info-item">
+                <span class="info-label">Branch:</span>
+                <span>{{ git_status.branch }}</span>
+            </div>
+            {% if git_status.last_commit %}
+            <div class="info-item">
+                <span class="info-label">Último commit:</span>
+                <span>{{ git_status.last_commit }}</span>
+            </div>
+            {% endif %}
+            {% if git_status.modified_files %}
+            <div class="modified-files">
+                <p class="info-label">Archivos modificados:</p>
+                {% for file in git_status.modified_files %}
+                <div class="file-status">
+                    <span class="status-badge status-{{ file.status }}">{{ file.status }}</span>
+                    <span>{{ file.file }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="git-clean">✓ Working tree clean</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function controlProject(nombre, action) {
+    fetch(`/proyecto/${nombre}/${action}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+</script>
+{% endblock %}

@@ -9,39 +9,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from core.database import db
 from core.logger import read_logs, logger
 from core.project_manager import project_manager
+from services.git_service import GitManager
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter()
 
 
 # ==================== VISTAS HTML ====================
-
-@router.get("/proyectos", response_class=HTMLResponse)
-async def list_projects(request: Request):
-    """Vista de gestión de proyectos"""
-    try:
-        # Obtener proyectos de la BD
-        proyectos = db.list_projects()
-
-        # Enriquecer con estado real
-        for proyecto in proyectos:
-            status = project_manager.get_project_status(
-                proyecto['nombre'],
-                proyecto.get('puerto')
-            )
-            proyecto.update(status)
-
-        return templates.TemplateResponse("proyectos.html", {
-            "request": request,
-            "proyectos": proyectos
-        })
-    except Exception as e:
-        logger.error(f"Error listando proyectos: {str(e)}")
-        return templates.TemplateResponse("proyectos.html", {
-            "request": request,
-            "proyectos": [],
-            "error": str(e)
-        })
 
 
 @router.get("/proyecto/{nombre}/detalle", response_class=HTMLResponse)
@@ -56,21 +30,20 @@ async def project_detail(request: Request, nombre: str):
         status = project_manager.get_project_status(nombre, proyecto.get('puerto'))
         proyecto.update(status)
 
-        # Requirements info
-        req_info = project_manager.get_requirements_info(nombre)
-
-        # Actividad reciente
-        actividad = db.get_activity(nombre, limit=20)
-
         # Logs recientes
-        logs = read_logs(nombre, limit=10)
+        logs = read_logs(nombre, limit=20)
+
+        # Git status
+        git_manager = GitManager(proyecto['ruta'])
+        git_status = None
+        if git_manager.is_git_repo():
+            git_status = git_manager.get_git_status()
 
         return templates.TemplateResponse("proyecto_detalle.html", {
             "request": request,
             "proyecto": proyecto,
-            "requirements": req_info,
-            "actividad": actividad,
-            "logs": logs
+            "logs": logs,
+            "git_status": git_status
         })
     except Exception as e:
         logger.error(f"Error en detalle de {nombre}: {str(e)}")
