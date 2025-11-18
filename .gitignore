@@ -38,6 +38,8 @@ token.json
 
 # Logs
 *.log
+logs/*
+!logs/.gitkeep
 
 # Backup files
 *.backup
