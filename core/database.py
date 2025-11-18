@@ -67,7 +67,17 @@ class Database:
     # ==================== PROYECTOS ====================
 
     def add_project(self, nombre: str, ruta: str, **kwargs) -> int:
-        """Agregar proyecto"""
+        """
+        Agregar un nuevo proyecto a la base de datos
+
+        Args:
+            nombre: Nombre único del proyecto
+            ruta: Ruta absoluta al directorio del proyecto
+            **kwargs: Campos opcionales (descripcion, puerto, tipo, tecnologias, dependencies, estado)
+
+        Returns:
+            int: ID del proyecto insertado
+        """
         with self.get_connection() as conn:
             cursor = conn.execute("""
                 INSERT INTO proyectos
@@ -86,14 +96,30 @@ class Database:
             return cursor.lastrowid
 
     def get_project(self, nombre: str) -> Optional[Dict]:
-        """Obtener proyecto por nombre"""
+        """
+        Obtener información completa de un proyecto
+
+        Args:
+            nombre: Nombre del proyecto
+
+        Returns:
+            Dict con información del proyecto o None si no existe
+        """
         with self.get_connection() as conn:
             cursor = conn.execute("SELECT * FROM proyectos WHERE nombre = ?", (nombre,))
             row = cursor.fetchone()
             return dict(row) if row else None
 
     def list_projects(self, estado: Optional[str] = None) -> List[Dict]:
-        """Listar proyectos"""
+        """
+        Listar todos los proyectos, opcionalmente filtrados por estado
+
+        Args:
+            estado: Estado para filtrar (activo, detenido, error, mantenimiento) o None para todos
+
+        Returns:
+            Lista de diccionarios con información de proyectos
+        """
         with self.get_connection() as conn:
             if estado:
                 cursor = conn.execute(
@@ -105,7 +131,13 @@ class Database:
             return [dict(row) for row in cursor.fetchall()]
 
     def update_project(self, nombre: str, **kwargs):
-        """Actualizar proyecto"""
+        """
+        Actualizar campos de un proyecto existente
+
+        Args:
+            nombre: Nombre del proyecto a actualizar
+            **kwargs: Campos a actualizar (estado, puerto, pid, descripcion, tipo, tecnologias, dependencies)
+        """
         fields = []
         values = []
 
@@ -155,7 +187,15 @@ class Database:
     # ==================== UTILIDADES ====================
 
     def sync_projects(self, projects_info: List[Dict]):
-        """Sincronizar proyectos descubiertos con la BD"""
+        """
+        Sincronizar proyectos descubiertos del sistema de archivos con la base de datos
+
+        - Agrega nuevos proyectos que no existen en BD
+        - Actualiza información de proyectos existentes
+
+        Args:
+            projects_info: Lista de diccionarios con información de proyectos descubiertos
+        """
         for project in projects_info:
             existing = self.get_project(project['nombre'])
 
