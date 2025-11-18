@@ -45,7 +45,7 @@ class ProjectManager:
 
     def _analyze_project(self, path: Path) -> Optional[Dict]:
         """
-        Analizar un proyecto y extraer información
+        Analizar un proyecto y extraer información detallada
 
         Args:
             path: Ruta al proyecto
@@ -73,6 +73,9 @@ class ProjectManager:
         # Detectar puerto (leer del código)
         port = self._detect_port(path / main_file)
 
+        # Analizar app.py en profundidad
+        app_analysis = self._analyze_app_file(path / main_file, project_type)
+
         return {
             'nombre': path.name,
             'ruta': str(path),
@@ -80,7 +83,12 @@ class ProjectManager:
             'tipo': project_type,
             'puerto': port,
             'dependencies': dependencies,
-            'tecnologias': ', '.join(dependencies[:5]) if dependencies else ''
+            'tecnologias': ', '.join(dependencies[:5]) if dependencies else '',
+            'endpoints': app_analysis.get('endpoints', []),
+            'imports': app_analysis.get('imports', []),
+            'descripcion': app_analysis.get('description', ''),
+            'has_database': app_analysis.get('has_database', False),
+            'has_auth': app_analysis.get('has_auth', False)
         }
 
     def _detect_project_type(self, path: Path) -> str:
@@ -118,6 +126,112 @@ class ProjectManager:
             return None
         except Exception:
             return None
+
+    def _analyze_app_file(self, app_file: Path, project_type: str) -> Dict:
+        """
+        Analizar archivo app.py en profundidad
+
+        Args:
+            app_file: Ruta al archivo app.py
+            project_type: Tipo de proyecto (Flask, FastAPI, etc.)
+
+        Returns:
+            Diccionario con análisis del código
+        """
+        try:
+            content = app_file.read_text()
+            import re
+
+            analysis = {
+                'endpoints': [],
+                'imports': [],
+                'description': '',
+                'has_database': False,
+                'has_auth': False
+            }
+
+            # Extraer imports
+            import_patterns = [
+                r'from\s+(\S+)\s+import',
+                r'import\s+(\S+)'
+            ]
+            imports_set = set()
+            for pattern in import_patterns:
+                matches = re.findall(pattern, content)
+                imports_set.update(matches)
+            analysis['imports'] = sorted(list(imports_set))
+
+            # Detectar base de datos
+            db_keywords = ['sqlalchemy', 'sqlite', 'mysql', 'postgres', 'mongodb', 'database', 'db.']
+            analysis['has_database'] = any(keyword in content.lower() for keyword in db_keywords)
+
+            # Detectar autenticación
+            auth_keywords = ['login', 'authentication', 'jwt', 'token', 'session', 'auth']
+            analysis['has_auth'] = any(keyword in content.lower() for keyword in auth_keywords)
+
+            # Extraer descripción (comentarios al inicio del archivo)
+            description_pattern = r'^"""(.*?)"""'
+            desc_match = re.search(description_pattern, content, re.DOTALL)
+            if desc_match:
+                analysis['description'] = desc_match.group(1).strip()[:200]  # Limitar a 200 caracteres
+
+            # Extraer endpoints según el tipo de proyecto
+            if project_type == 'Flask':
+                # Buscar decoradores @app.route
+                flask_routes = re.findall(r'@app\.route\(["\']([^"\']+)["\'](?:.*?methods\s*=\s*\[([^\]]+)\])?', content)
+                for route, methods in flask_routes:
+                    methods_list = [m.strip().strip('\'"') for m in methods.split(',')] if methods else ['GET']
+                    for method in methods_list:
+                        analysis['endpoints'].append({
+                            'path': route,
+                            'method': method,
+                            'type': 'Flask Route'
+                        })
+
+                # También buscar @app.get, @app.post, etc.
+                http_methods = ['get', 'post', 'put', 'delete', 'patch']
+                for method in http_methods:
+                    method_routes = re.findall(rf'@app\.{method}\(["\']([^"\']+)["\']', content, re.IGNORECASE)
+                    for route in method_routes:
+                        analysis['endpoints'].append({
+                            'path': route,
+                            'method': method.upper(),
+                            'type': 'Flask Route'
+                        })
+
+            elif project_type == 'FastAPI':
+                # Buscar decoradores @app.get, @app.post, etc. y @router.
+                http_methods = ['get', 'post', 'put', 'delete', 'patch', 'options']
+                for method in http_methods:
+                    # Para @app.method
+                    app_routes = re.findall(rf'@app\.{method}\(["\']([^"\']+)["\']', content, re.IGNORECASE)
+                    for route in app_routes:
+                        analysis['endpoints'].append({
+                            'path': route,
+                            'method': method.upper(),
+                            'type': 'FastAPI Route'
+                        })
+
+                    # Para @router.method
+                    router_routes = re.findall(rf'@router\.{method}\(["\']([^"\']+)["\']', content, re.IGNORECASE)
+                    for route in router_routes:
+                        analysis['endpoints'].append({
+                            'path': route,
+                            'method': method.upper(),
+                            'type': 'FastAPI Route'
+                        })
+
+            return analysis
+
+        except Exception as e:
+            return {
+                'endpoints': [],
+                'imports': [],
+                'description': '',
+                'has_database': False,
+                'has_auth': False,
+                'error': str(e)
+            }
 
     # ==================== DEPENDENCIAS ====================
 

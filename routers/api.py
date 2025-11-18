@@ -60,7 +60,7 @@ async def list_projects():
 
 @router.get("/proyecto/{nombre}")
 async def get_project(nombre: str):
-    """Obtener información de un proyecto"""
+    """Obtener información completa de un proyecto incluyendo análisis de app.py"""
     try:
         proyecto = db.get_project(nombre)
 
@@ -73,11 +73,28 @@ async def get_project(nombre: str):
         # Requirements
         req_info = project_manager.get_requirements_info(nombre)
 
+        # Análisis completo del proyecto (re-analizar para obtener datos frescos)
+        from pathlib import Path
+        project_path = Path(proyecto['ruta'])
+        if project_path.exists():
+            analysis = project_manager._analyze_project(project_path)
+        else:
+            analysis = None
+
         return {
             "success": True,
             "proyecto": proyecto,
             "status": status,
-            "requirements": req_info
+            "requirements": req_info,
+            "analysis": {
+                "endpoints": analysis.get('endpoints', []) if analysis else [],
+                "imports": analysis.get('imports', []) if analysis else [],
+                "descripcion": analysis.get('descripcion', '') if analysis else '',
+                "has_database": analysis.get('has_database', False) if analysis else False,
+                "has_auth": analysis.get('has_auth', False) if analysis else False,
+                "endpoints_count": len(analysis.get('endpoints', [])) if analysis else 0,
+                "imports_count": len(analysis.get('imports', [])) if analysis else 0
+            }
         }
     except Exception as e:
         logger.error(f"Error obteniendo {nombre}: {str(e)}")
@@ -135,6 +152,52 @@ async def get_project_status(nombre: str):
         }
     except Exception as e:
         logger.error(f"Error obteniendo status de {nombre}: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/proyecto/{nombre}/analysis")
+async def get_project_analysis(nombre: str):
+    """Obtener análisis detallado de app.py de un proyecto"""
+    try:
+        proyecto = db.get_project(nombre)
+
+        if not proyecto:
+            return {"success": False, "error": "Proyecto no encontrado"}
+
+        # Analizar proyecto
+        from pathlib import Path
+        project_path = Path(proyecto['ruta'])
+
+        if not project_path.exists():
+            return {"success": False, "error": "Ruta del proyecto no existe"}
+
+        analysis = project_manager._analyze_project(project_path)
+
+        if not analysis:
+            return {"success": False, "error": "No se pudo analizar el proyecto"}
+
+        return {
+            "success": True,
+            "proyecto": nombre,
+            "analysis": {
+                "tipo": analysis.get('tipo', 'Unknown'),
+                "main_file": analysis.get('main_file', ''),
+                "puerto": analysis.get('puerto'),
+                "descripcion": analysis.get('descripcion', ''),
+                "endpoints": analysis.get('endpoints', []),
+                "endpoints_count": len(analysis.get('endpoints', [])),
+                "imports": analysis.get('imports', []),
+                "imports_count": len(analysis.get('imports', [])),
+                "dependencies": analysis.get('dependencies', []),
+                "dependencies_count": len(analysis.get('dependencies', [])),
+                "features": {
+                    "has_database": analysis.get('has_database', False),
+                    "has_auth": analysis.get('has_auth', False)
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error analizando {nombre}: {str(e)}")
         return {"success": False, "error": str(e)}
 
 
