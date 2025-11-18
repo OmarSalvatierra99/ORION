@@ -1,26 +1,256 @@
 {% extends "base.html" %}
 
-{% block title %}Proyectos{% endblock %}
+{% block title %}ORION Dashboard{% endblock %}
 
 {% block content %}
-<div class="projects-list">
-    {% if proyectos %}
-        {% for proyecto in proyectos %}
-        <div class="project-card" onclick="window.location.href='/proyecto/{{ proyecto.nombre }}/detalle'">
-            <div class="project-header">
-                <h3>{{ proyecto.nombre }}</h3>
-                <span class="project-status {% if proyecto.is_running %}status-active{% else %}status-inactive{% endif %}">
-                    {{ "Activo" if proyecto.is_running else "Detenido" }}
-                </span>
-            </div>
-            {% if proyecto.puerto %}
-            <p class="project-info">Puerto: {{ proyecto.puerto }}</p>
-            {% endif %}
-            <p class="project-path">{{ proyecto.ruta }}</p>
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="header-content">
+        <div>
+            <h1 class="dashboard-title">Dashboard de Proyectos</h1>
+            <p class="dashboard-subtitle">Gestión centralizada de aplicaciones</p>
         </div>
-        {% endfor %}
-    {% else %}
-        <p class="empty-state">No hay proyectos disponibles</p>
-    {% endif %}
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="syncProjects()">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                    <path d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                </svg>
+                Sincronizar
+            </button>
+            <a href="/logs/all" class="btn btn-secondary">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                </svg>
+                Ver Logs
+            </a>
+            <a href="/commits" class="btn btn-secondary">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0z"/>
+                    <path d="M8 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 1a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+                </svg>
+                Commits
+            </a>
+        </div>
+    </div>
 </div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    {% set activos = proyectos|selectattr('is_running')|list|length %}
+    {% set detenidos = proyectos|length - activos %}
+
+    <div class="stat-card stat-success">
+        <div class="stat-icon">
+            <svg fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+            </svg>
+        </div>
+        <h3>Proyectos Activos</h3>
+        <div class="stat-value status-online">{{ activos }}</div>
+        <div class="stat-label">en ejecución</div>
+    </div>
+
+    <div class="stat-card stat-info">
+        <div class="stat-icon">
+            <svg fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+        </div>
+        <h3>Total Proyectos</h3>
+        <div class="stat-value">{{ proyectos|length }}</div>
+        <div class="stat-label">registrados</div>
+    </div>
+
+    <div class="stat-card stat-warning">
+        <div class="stat-icon">
+            <svg fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+        </div>
+        <h3>Detenidos</h3>
+        <div class="stat-value">{{ detenidos }}</div>
+        <div class="stat-label">inactivos</div>
+    </div>
+
+    <div class="stat-card stat-primary">
+        <div class="stat-icon">
+            <svg fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+            </svg>
+        </div>
+        <h3>Puerto Base</h3>
+        <div class="stat-value">4090</div>
+        <div class="stat-label">ORION</div>
+    </div>
+</div>
+
+<!-- Projects Section -->
+<div class="section-container">
+    <div class="section-header">
+        <h2 class="section-title">Proyectos</h2>
+    </div>
+
+    <div class="projects-list">
+        {% if proyectos %}
+            {% for proyecto in proyectos %}
+            <div class="project-card-enhanced">
+                <div class="project-card-header">
+                    <div class="project-title-section">
+                        <h3 class="project-name">{{ proyecto.nombre }}</h3>
+                        <span class="project-status {% if proyecto.is_running %}status-active{% else %}status-inactive{% endif %}">
+                            {{ "Activo" if proyecto.is_running else "Detenido" }}
+                        </span>
+                    </div>
+                    <div class="project-controls-inline">
+                        {% if proyecto.is_running %}
+                            <button class="btn-icon btn-danger" onclick="event.stopPropagation(); controlProject('{{ proyecto.nombre }}', 'stop')" title="Detener">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"/>
+                                </svg>
+                            </button>
+                            <button class="btn-icon btn-warning" onclick="event.stopPropagation(); controlProject('{{ proyecto.nombre }}', 'restart')" title="Reiniciar">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                </svg>
+                            </button>
+                        {% else %}
+                            <button class="btn-icon btn-success" onclick="event.stopPropagation(); controlProject('{{ proyecto.nombre }}', 'start')" title="Iniciar">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+                                </svg>
+                            </button>
+                        {% endif %}
+                        <a href="/proyecto/{{ proyecto.nombre }}/detalle" class="btn-icon btn-info" onclick="event.stopPropagation()" title="Ver detalles">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="project-card-body">
+                    <div class="project-info-grid">
+                        {% if proyecto.puerto %}
+                        <div class="info-badge">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5h-6a.5.5 0 0 1-.5-.5v-6z"/>
+                                <path d="M5.5 2A1.5 1.5 0 0 0 4 3.5v9A1.5 1.5 0 0 0 5.5 14h5a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 10.5 2h-5zM3 3.5A2.5 2.5 0 0 1 5.5 1h5A2.5 2.5 0 0 1 13 3.5v9a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 3 12.5v-9z"/>
+                            </svg>
+                            Puerto {{ proyecto.puerto }}
+                        </div>
+                        {% endif %}
+                        {% if proyecto.pid %}
+                        <div class="info-badge">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+                            </svg>
+                            PID {{ proyecto.pid }}
+                        </div>
+                        {% endif %}
+                        {% if proyecto.cpu_percent is not none %}
+                        <div class="info-badge">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0zm-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3h-7zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5v-3zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/>
+                            </svg>
+                            CPU {{ "%.1f"|format(proyecto.cpu_percent) }}%
+                        </div>
+                        {% endif %}
+                        {% if proyecto.memory_mb is not none %}
+                        <div class="info-badge">
+                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M1 3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.586a1 1 0 0 0 .707-.293l.353-.353a.5.5 0 0 1 .708 0l.353.353a1 1 0 0 0 .707.293H13a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H9.414a1 1 0 0 0-.707.293l-.353.353a.5.5 0 0 1-.708 0L7.293 3.293A1 1 0 0 0 6.586 3H1z"/>
+                            </svg>
+                            RAM {{ "%.1f"|format(proyecto.memory_mb) }} MB
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="project-path-display">
+                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/>
+                        </svg>
+                        {{ proyecto.ruta }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9zM2.5 3a.5.5 0 0 0-.5.5V6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5zM14 7H2v5.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V7z"/>
+                </svg>
+                <p>No hay proyectos disponibles</p>
+                <button class="btn btn-primary" onclick="syncProjects()">Sincronizar Proyectos</button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function controlProject(nombre, action) {
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span style="animation: spin 1s linear infinite;">⏳</span>';
+
+    fetch(`/proyecto/${nombre}/${action}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
+
+function syncProjects() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Sincronizando...';
+
+    fetch('/proyectos/sync', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error al sincronizar: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+        btn.disabled = false;
+        btn.textContent = originalText;
+    });
+}
+</script>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
 {% endblock %}
