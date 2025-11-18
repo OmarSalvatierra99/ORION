@@ -1,237 +1,365 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
-ORION is a centralized system for managing cloud-based software projects. It's a FastAPI-based web application that provides:
+**ORION v3.0** is a centralized system for managing cloud-based software projects. It's a modular FastAPI-based application that provides:
 
-- **Project Management**: Monitor and manage multiple Flask/FastAPI projects from your portfolio
-- **Centralized Logging**: JSON-formatted logging system for all portfolio projects
-- **Project Monitoring**: Track project status, health, and activity in real-time
-- **Dashboard & API**: Modern, elegant web UI and RESTful API for comprehensive system monitoring
-- **Homogeneous Structure**: Maintain consistent structure and standards across all portfolio projects
+- **Project Management**: Auto-discover, monitor, and control Flask/FastAPI projects
+- **Process Control**: Start/stop/restart projects directly from the dashboard
+- **Dependency Tracking**: Read and display requirements.txt for each project
+- **Centralized Logging**: JSON-formatted logging system for all projects
+- **Real-time Monitoring**: Track CPU, memory, ports, and project health
+- **RESTful API**: Complete API for programmatic access
+- **Modern Dashboard**: Elegant UI with futuristic dark theme
 
-## Development Commands
-
-### Running ORION
+## Quick Start
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
+# Install dependencies
+pip install -r requirements.txt
 
-# Start the application (runs on port 4090)
+# Run ORION (port 4090)
 python app.py
 
-# Alternative: Run with uvicorn directly
+# Alternative with uvicorn
 uvicorn app:app --host 0.0.0.0 --port 4090
-```
-
-### Database Initialization
-
-```bash
-# Initialize database and auto-discover portfolio projects
-python orion_db.py
-
-# This creates orion.db and registers all projects from portfolio/projects/
-```
-
-### Testing the Logger
-
-```bash
-# Test the logging system
-python orion_logger.py
-
-# View logs in real-time (requires jq)
-tail -f logs/orion.log | jq .
 ```
 
 ## Architecture
 
-### Core Components
+### **Version 3.0 - Modular Structure**
 
-**app.py** (FastAPI Application)
-- Main web application with HTML templates (Jinja2) and JSON API endpoints
-- Routes for projects (`/proyectos`, `/proyecto/{nombre}/logs`, `/proyecto/{nombre}/detalle`) and API (`/api/*`)
-- Startup event auto-initializes portfolio projects from `portfolio/projects/`
-- Modern, elegant UI with futuristic dark theme and responsive layouts
-- Runs on port 4090
+```
+ORION/
+├── config.py                    # Centralized configuration
+├── app.py                       # Minimal FastAPI application
+│
+├── core/                        # Core functionality
+│   ├── database.py             # SQLite database manager
+│   ├── logger.py               # JSON logging system
+│   └── project_manager.py      # Project control & discovery
+│
+├── services/                    # Auxiliary services
+│   ├── system_monitor.py       # CPU, memory, ports monitoring
+│   └── git_service.py          # Git integration
+│
+├── routers/                     # Route modules
+│   ├── projects.py             # Project management routes
+│   ├── api.py                  # REST API endpoints
+│   └── system.py               # System monitoring routes
+│
+├── templates/                   # Jinja2 HTML templates
+├── static/                      # CSS, JS, images
+├── logs/                        # JSON log files
+├── portfolio/projects/          # Portfolio projects directory
+└── orion.db                     # SQLite database
+```
 
-**orion_db.py** (Database Manager)
-- SQLite database manager with context manager pattern for connections
-- Two main tables: `proyectos`, `actividad_proyectos`
-- `OrionDB` class provides methods for CRUD operations on projects
-- `inicializar_proyectos_portfolio()` auto-discovers projects from filesystem
+### Key Design Principles
 
-**orion_logger.py** (Centralized Logging)
-- `OrionLogger` class wraps Python's logging with JSON formatting
-- All logs stored in `/logs/{project_name}.log` with structured JSON format
-- Provides specialized methods: `log_request()`, `log_startup()`, `log_error_exception()`
-- `read_logs()` function parses JSON logs for web display
+1. **Modular**: Clear separation of concerns (core, services, routers)
+2. **Minimal**: Each module has a single, well-defined responsibility
+3. **Functional**: Focus on practical features (start/stop, requirements, monitoring)
+4. **Clean**: No redundant code, easy to read and maintain
 
-### Database Schema
+## Core Modules
 
-**proyectos table**
-- Tracks portfolio projects with fields: `nombre`, `ruta`, `puerto`, `estado`, `tipo`, `tecnologias`
-- States: `activo`, `detenido`, `error`, `mantenimiento`
-- Auto-discovered from `portfolio/projects/` directory
-- Timestamps: `creado_en`, `actualizado_en`, `ultima_actividad`
+### **config.py**
+Centralized configuration for the entire system:
+- Directories (LOGS_DIR, DB_PATH, PORTFOLIO_DIR)
+- Application settings (HOST, PORT, VERSION)
+- Project states and port ranges
 
-**actividad_proyectos table**
-- Event log for project lifecycle events (state changes, deployments, errors, etc.)
-- Linked to `proyectos` via `proyecto_id` foreign key
-- Fields: `tipo_evento`, `descripcion`, `datos_extra`, `timestamp`
-- Useful for tracking project health and historical data
+### **core/database.py**
+Simplified database manager with context manager pattern:
+- `db.add_project()` - Add new project
+- `db.get_project(name)` - Get project by name
+- `db.list_projects()` - List all projects
+- `db.update_project(name, **kwargs)` - Update project fields
+- `db.sync_projects(projects)` - Sync discovered projects with DB
+- `db.log_activity()` - Log project events
 
-### Portfolio Projects Integration
+**Database Schema:**
+- **proyectos**: id, nombre, ruta, puerto, estado, tipo, tecnologias, dependencies, pid
+- **actividad**: id, proyecto_id, tipo_evento, descripcion, timestamp
 
-Portfolio projects are stored in `portfolio/projects/` with these known projects:
-- **scil** (port 4050): Flask, pandas, SQLite
-- **chat** (port 5002): Flask, SQLAlchemy, SocketIO
-- **cleandoc** (port 4085): Flask, python-docx
-- **lexnum** (port 4055): Flask, pandas, openpyxl
-- **procesar-xml** (port 4080): Flask, pandas, defusedxml
-- **scan-actas** (port 5045): Flask, OpenCV, PyMuPDF
-- **sipac** (port 5020): Flask, PostgreSQL, pandas
+### **core/logger.py**
+Simplified JSON logging system:
+- `logger = get_logger(project_name)` - Get logger instance
+- `logger.info/warning/error()` - Log messages
+- `read_logs(project_name, limit)` - Read project logs
+- `get_logs_summary()` - Get summary of all logs
 
-Projects can integrate ORION logging:
+**Log Format:**
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "level": "INFO",
+  "project": "orion.project_name",
+  "message": "Project started",
+  "extra_field": "value"
+}
+```
+
+### **core/project_manager.py** ⭐ NEW
+The heart of project management:
+
+**Discovery:**
+- `discover_projects()` - Auto-discover projects in portfolio directory
+- `read_requirements(path)` - Parse requirements.txt
+- `get_requirements_info(name)` - Get detailed dependency info
+
+**Control:**
+- `start_project(name)` - Start project subprocess
+- `stop_project(name)` - Stop project by PID
+- `restart_project(name)` - Restart project
+- `is_project_running(name)` - Check if running
+
+**Status:**
+- `get_project_status(name, port)` - Get real-time status (PID, CPU, memory)
+- `get_all_project_status()` - Get status of all projects
+
+## Services
+
+### **services/system_monitor.py**
+System resource monitoring:
+- `SystemMonitor` - CPU, memory, disk, network info
+- `PortMonitor` - List listening ports, check port availability
+- `ProcessMonitor` - Top processes by CPU/memory
+
+### **services/git_service.py**
+Git repository integration:
+- `GitManager.get_git_status()` - Repository status
+- `GitManager.get_recent_commits()` - Recent commit history
+- `GitManager.get_branches()` - List branches
+
+## Routers
+
+### **routers/projects.py**
+Project management endpoints:
+- `GET /proyectos` - Project list view
+- `GET /proyecto/{nombre}/detalle` - Project details with requirements
+- `GET /proyecto/{nombre}/logs` - Project logs view
+- `POST /proyecto/{nombre}/start` - Start project
+- `POST /proyecto/{nombre}/stop` - Stop project
+- `POST /proyecto/{nombre}/restart` - Restart project
+- `POST /proyectos/sync` - Sync projects from filesystem
+
+### **routers/api.py**
+REST API endpoints (all under `/api`):
+- `GET /api/status` - System status
+- `GET /api/proyectos` - List all projects (JSON)
+- `GET /api/proyecto/{nombre}` - Get project info + requirements
+- `GET /api/proyecto/{nombre}/logs` - Get project logs (JSON)
+- `GET /api/proyecto/{nombre}/status` - Real-time project status
+- `GET /api/proyecto/{nombre}/requirements` - Project dependencies
+
+### **routers/system.py**
+System monitoring endpoints:
+- `GET /sistema` - System dashboard (CPU, memory, processes)
+- `GET /puertos` - Ports dashboard (listening ports)
+- `GET /api/sistema` - System info (JSON)
+- `GET /api/puertos` - Ports info (JSON)
+- `GET /api/procesos` - Process info (JSON)
+
+## Main Application
+
+### **app.py**
+Minimal FastAPI application:
+- Includes all routers
+- Startup event: auto-discovers and syncs projects
+- Dashboard route (`/`)
+- Health check (`/health`)
+
+## Common Tasks
+
+### Start/Stop Projects Programmatically
+
 ```python
-from orion_logger import get_logger
+from core.project_manager import project_manager
 
-logger = get_logger("project_name")
-logger.log_startup("0.0.0.0", 5000)
-logger.log_request(request.method, request.path, 200)
+# Start a project
+result = project_manager.start_project("my-project")
+print(result)  # {'success': True, 'pid': 12345}
+
+# Stop a project
+result = project_manager.stop_project("my-project")
+
+# Get status
+status = project_manager.get_project_status("my-project", port=5000)
+print(status)  # {'is_running': True, 'pid': 12345, 'cpu_percent': 2.5}
 ```
 
-## Key Technical Patterns
+### Work with Database
 
-### Database Context Manager
-All database operations use `OrionDB.get_connection()` context manager which:
-- Creates connection with `sqlite3.Row` factory
-- Auto-commits on success
-- Auto-rolls back on exceptions
-- Always closes connection
+```python
+from core.database import db
 
-### JSON Logging Format
-All logs use structured JSON with these standard fields:
-- `timestamp` (ISO 8601 with 'Z' suffix)
-- `level` (INFO, WARNING, ERROR, CRITICAL)
-- `project` (logger name: "orion.{project_name}")
-- `message` (human-readable message)
-- Additional contextual fields via `**extra` kwargs
+# List projects
+projects = db.list_projects()
 
-### Project Auto-Discovery
-`inicializar_proyectos_portfolio()` scans `portfolio/projects/` and registers projects based on hardcoded mapping in `orion_db.py:393-403`. To add new projects, update the `proyectos_info` dictionary.
+# Get specific project
+project = db.get_project("chat")
 
-## API Endpoints
+# Update project
+db.update_project("chat", estado="activo", pid=12345)
 
-**Status and Monitoring**
-- `GET /` - Dashboard with system statistics and recent projects
-- `GET /api/status` - System status with detailed project statistics (JSON)
-- `GET /api/proyectos` - List all projects as JSON
-- `GET /api/logs/{proyecto}?limit=100` - Get project logs in JSON format
-
-**Project Management**
-- `GET /proyectos` - Web UI for comprehensive project management
-- `GET /proyecto/{nombre}/logs` - View logs for specific project
-- `GET /proyecto/{nombre}/detalle` - Detailed project view with activity history
-- `POST /api/proyecto/{nombre}/estado` - Update project state (form-encoded: `estado=activo`)
-
-## File Structure
-
-```
-/home/gabo/ORION/
-├── app.py                  # FastAPI application
-├── orion_db.py            # Database manager (SQLite)
-├── orion_logger.py        # Centralized logging system
-├── orion.db               # SQLite database
-├── logs/                  # JSON logs for all projects
-├── templates/             # Jinja2 HTML templates
-│   ├── index.html         # Dashboard
-│   ├── proyectos.html     # Project management
-│   ├── proyecto_logs.html # Log viewer
-│   └── proyecto_detalle.html # Project details (if exists)
-├── static/                # Static assets
-│   ├── css/
-│   │   └── style.css      # Main stylesheet
-│   └── js/
-│       └── app.js         # Frontend logic
-├── portfolio/projects/    # Portfolio projects directory
-└── venv/                  # Python virtual environment
+# Log activity
+db.log_activity("chat", "inicio", "Project started successfully")
 ```
 
-## Working with ORION
+### Read Project Requirements
 
-### Adding a New Portfolio Project
+```python
+from core.project_manager import project_manager
 
-1. Update `proyectos_info` dictionary in `orion_db.py` (around line 393)
-2. Run `python orion_db.py` to register the new project
-3. Integrate logging in the project's main file (see ORION_GUIDE.md)
+# Get requirements info
+req_info = project_manager.get_requirements_info("chat")
+print(req_info)
+# {
+#   'exists': True,
+#   'dependencies': ['flask', 'sqlalchemy', 'socketio'],
+#   'count': 3
+# }
+```
 
-### Querying Database Directly
+### Auto-Discover Projects
+
+```python
+from core.project_manager import project_manager
+from core.database import db
+
+# Discover projects from portfolio directory
+discovered = project_manager.discover_projects()
+
+# Sync with database
+db.sync_projects(discovered)
+
+print(f"Synced {len(discovered)} projects")
+```
+
+## API Usage Examples
+
+```bash
+# Get system status
+curl http://localhost:4090/api/status
+
+# List all projects
+curl http://localhost:4090/api/proyectos
+
+# Get project with requirements
+curl http://localhost:4090/api/proyecto/chat
+
+# Get project logs
+curl http://localhost:4090/api/proyecto/chat/logs?limit=50
+
+# Start a project
+curl -X POST http://localhost:4090/proyecto/chat/start
+
+# Stop a project
+curl -X POST http://localhost:4090/proyecto/chat/stop
+
+# Sync projects from filesystem
+curl -X POST http://localhost:4090/proyectos/sync
+```
+
+## Configuration
+
+All configuration is centralized in **config.py**:
+
+```python
+# Modify these as needed
+APP_HOST = "0.0.0.0"
+APP_PORT = 4090
+PORTFOLIO_DIR = BASE_DIR / "portfolio" / "projects"
+LOG_LEVEL = "INFO"
+```
+
+## Project States
+
+Projects can have these states:
+- **activo**: Project is running
+- **detenido**: Project is stopped
+- **error**: Project encountered an error
+- **mantenimiento**: Under maintenance
+
+## Database Queries
 
 ```bash
 sqlite3 orion.db
 
-# Useful queries
-SELECT nombre, puerto, estado FROM proyectos WHERE estado = 'activo';
-SELECT descripcion, (monto - pagado) as saldo FROM deudas WHERE estado != 'pagada';
+# List active projects
+SELECT nombre, puerto, estado, pid FROM proyectos WHERE estado = 'activo';
+
+# View recent activity
+SELECT p.nombre, a.tipo_evento, a.descripcion, a.timestamp
+FROM actividad a
+JOIN proyectos p ON a.proyecto_id = p.id
+ORDER BY a.timestamp DESC LIMIT 20;
+
+# Check dependencies
+SELECT nombre, dependencies FROM proyectos WHERE dependencies IS NOT NULL;
 ```
 
-### Debugging Issues
+## Logging
 
-- Check ORION logs: `logs/orion.log`
-- Check specific project logs: `logs/{project_name}.log`
-- Verify database state: `sqlite3 orion.db ".tables"` and `.schema`
-- Check port availability: `lsof -i :4090`
+All logs are stored in `logs/` directory in JSON format:
+
+```bash
+# View logs in real-time (requires jq)
+tail -f logs/orion.log | jq .
+
+# Search for errors
+grep -i error logs/orion.log | jq .
+
+# View specific project logs
+cat logs/chat.log | jq .
+```
 
 ## Environment
 
-- **Python Version**: 3.13
-- **Web Framework**: FastAPI 0.104.1 with Uvicorn 0.24.0
-- **Database**: SQLite (file-based, `orion.db`)
-- **Port**: 4090 (hardcoded in `app.py`)
-- **Logs Directory**: `/home/gabo/ORION/logs/`
+- **Python**: 3.8+
+- **Framework**: FastAPI 0.104.1 + Uvicorn 0.24.0
+- **Database**: SQLite (orion.db)
+- **Port**: 4090
+- **Dependencies**: psutil, jinja2, python-multipart
 
 ## Design Philosophy
 
-ORION follows a clean, functional, and elegant design approach:
+**v3.0 Goals:**
+- ✅ Modular architecture with clear separation
+- ✅ Minimalista - no redundant code
+- ✅ Functional - practical features that work
+- ✅ Clean code - easy to read and maintain
+- ✅ Auto-discovery of portfolio projects
+- ✅ Start/stop projects directly
+- ✅ Read and display requirements.txt
+- ✅ Real-time process monitoring
+- ✅ Comprehensive REST API
 
-### Visual Design
-- **Dark futuristic theme**: Inspired by AI assistant interfaces like Jarvis
-- **Color palette**: Electric blue (`#00d4ff`), dark backgrounds, glowing effects
-- **Smooth animations**: Subtle transitions and hover effects for better UX
-- **Responsive layout**: Works seamlessly across desktop and mobile devices
+## Troubleshooting
 
-### Code Standards
-- **Centralized logging**: All projects use the same JSON logging format
-- **Database-driven**: SQLite for lightweight but robust data persistence
-- **RESTful API**: Clean API design for programmatic access
-- **Modular architecture**: Separation of concerns (DB, logging, web layer)
+**Import errors:**
+```bash
+pip install -r requirements.txt
+```
 
-## Templates
+**Database issues:**
+```bash
+# Reset database
+rm orion.db
+python -c "from core.database import db; print('DB initialized')"
+```
 
-**index.html** - Modern dashboard with futuristic dark theme showing:
-- System statistics (active projects, total projects, alerts, logs)
-- Recent projects with status badges
-- Quick action buttons for common tasks
-- Animated ORION logo with pulsing rings
+**Port conflicts:**
+```bash
+# Check what's using port 4090
+lsof -i :4090
+```
 
-**proyectos.html** - Comprehensive project management interface with:
-- Grid layout of all projects with status indicators
-- Technology stack badges
-- Quick access to logs and project details
-- Elegant card-based design with hover effects
-
-**proyecto_logs.html** - Log viewer for individual projects with:
-- JSON log parsing and formatting
-- Color-coded log levels (INFO, WARNING, ERROR)
-- Pagination and filtering capabilities
-
-**proyecto_detalle.html** - Detailed project view with:
-- Complete project information
-- Activity history timeline
-- Recent logs preview
-- Project health indicators
-
-All templates use a cohesive dark futuristic theme with electric blue accents, smooth animations, and responsive layouts
+**Project won't start:**
+- Check if port is available
+- Verify project has valid main file (app.py, main.py)
+- Check project logs in `logs/{project_name}.log`

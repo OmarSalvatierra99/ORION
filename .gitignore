@@ -39,6 +39,11 @@ token.json
 # Logs
 *.log
 
+# Backup files
+*.backup
+*.bak
+*~
+
 # Portfolio directory (según README.md)
 portfolio/
 
