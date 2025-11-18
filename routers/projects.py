@@ -70,6 +70,78 @@ async def project_logs(request: Request, nombre: str):
         return HTMLResponse(f"Error: {str(e)}", status_code=500)
 
 
+@router.get("/logs/all", response_class=HTMLResponse)
+async def all_logs(request: Request):
+    """Vista de todos los logs del sistema"""
+    try:
+        from pathlib import Path
+        from config import LOGS_DIR
+        import json
+
+        all_logs = []
+
+        # Leer todos los archivos de log
+        logs_path = Path(LOGS_DIR)
+        if logs_path.exists():
+            for log_file in sorted(logs_path.glob("*.log"), reverse=True):
+                try:
+                    with open(log_file, 'r') as f:
+                        # Leer últimas 100 líneas de cada archivo
+                        lines = f.readlines()[-100:]
+                        for line in lines:
+                            try:
+                                log_entry = json.loads(line.strip())
+                                all_logs.append(log_entry)
+                            except:
+                                pass
+                except Exception as e:
+                    logger.error(f"Error leyendo {log_file}: {str(e)}")
+
+        # Ordenar por timestamp (más recientes primero)
+        all_logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        all_logs = all_logs[:500]  # Limitar a 500 logs más recientes
+
+        return templates.TemplateResponse("all_logs.html", {
+            "request": request,
+            "logs": all_logs
+        })
+    except Exception as e:
+        logger.error(f"Error en vista de todos los logs: {str(e)}")
+        return HTMLResponse(f"Error: {str(e)}", status_code=500)
+
+
+@router.get("/commits", response_class=HTMLResponse)
+async def commits_view(request: Request):
+    """Vista de historial de commits de ORION"""
+    try:
+        from config import BASE_DIR
+
+        git_manager = GitManager(str(BASE_DIR))
+
+        commits = []
+        error = None
+
+        if git_manager.is_git_repo():
+            commits_data = git_manager.get_recent_commits(limit=50)
+            if commits_data and not commits_data.get('error'):
+                commits = commits_data.get('commits', [])
+        else:
+            error = "El directorio ORION no es un repositorio Git"
+
+        return templates.TemplateResponse("commits.html", {
+            "request": request,
+            "commits": commits,
+            "error": error
+        })
+    except Exception as e:
+        logger.error(f"Error en vista de commits: {str(e)}")
+        return templates.TemplateResponse("commits.html", {
+            "request": request,
+            "commits": [],
+            "error": str(e)
+        })
+
+
 # ==================== ACCIONES ====================
 
 @router.post("/proyecto/{nombre}/start")
