@@ -85,30 +85,72 @@ def get_logger(project_name: str) -> Logger:
     return Logger(project_name)
 
 
-def read_logs(project_name: str, limit: int = 100) -> List[Dict]:
-    """Leer logs de un proyecto"""
-    log_file = LOGS_DIR / f"{project_name}.log"
+def read_logs(project_name: Optional[str] = None, limit: int = 100) -> List[Dict]:
+    """
+    Leer logs de un proyecto o todos los proyectos
 
-    if not log_file.exists():
-        return []
+    Args:
+        project_name: Nombre del proyecto (None para todos)
+        limit: Límite de logs a retornar
 
-    logs = []
-    try:
-        with open(log_file, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            for line in lines[-limit:]:
+    Returns:
+        Lista de logs ordenados por timestamp (más recientes primero)
+    """
+    if project_name:
+        # Leer logs de un proyecto específico
+        log_file = LOGS_DIR / f"{project_name}.log"
+
+        if not log_file.exists():
+            return []
+
+        logs = []
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines[-limit:]:
+                    try:
+                        logs.append(json.loads(line.strip()))
+                    except json.JSONDecodeError:
+                        logs.append({
+                            "timestamp": datetime.utcnow().isoformat() + 'Z',
+                            "level": "INFO",
+                            "message": line.strip()
+                        })
+        except Exception:
+            return []
+
+        return logs
+    else:
+        # Leer todos los logs de todos los proyectos
+        all_logs = []
+
+        try:
+            for log_file in sorted(LOGS_DIR.glob("*.log"), reverse=True):
                 try:
-                    logs.append(json.loads(line.strip()))
-                except json.JSONDecodeError:
-                    logs.append({
-                        "timestamp": datetime.utcnow().isoformat() + 'Z',
-                        "level": "INFO",
-                        "message": line.strip()
-                    })
-    except Exception:
-        return []
+                    with open(log_file, 'r', encoding='utf-8') as f:
+                        # Leer últimas 100 líneas de cada archivo
+                        lines = f.readlines()[-100:]
+                        for line in lines:
+                            try:
+                                log_entry = json.loads(line.strip())
+                                all_logs.append(log_entry)
+                            except json.JSONDecodeError:
+                                all_logs.append({
+                                    "timestamp": datetime.utcnow().isoformat() + 'Z',
+                                    "level": "INFO",
+                                    "message": line.strip()
+                                })
+                except Exception:
+                    continue
+        except Exception:
+            return []
 
-    return logs
+        # Ordenar por timestamp (más recientes primero)
+        all_logs.sort(
+            key=lambda x: x.get('timestamp', ''),
+            reverse=True
+        )
+        return all_logs[:limit]
 
 
 def get_logs_summary() -> Dict[str, Dict]:

@@ -2,12 +2,15 @@
 Router API
 Endpoints REST para acceso programático
 """
+from pathlib import Path
+
 from fastapi import APIRouter
 from datetime import datetime
 
 from core.database import db
 from core.logger import read_logs, get_logs_summary, logger
 from core.project_manager import project_manager
+from core.project_helpers import enrich_projects_with_status
 
 router = APIRouter(prefix="/api")
 
@@ -41,12 +44,7 @@ async def list_projects():
         proyectos = db.list_projects()
 
         # Enriquecer con estado real
-        for proyecto in proyectos:
-            status = project_manager.get_project_status(
-                proyecto['nombre'],
-                proyecto.get('puerto')
-            )
-            proyecto['real_status'] = status
+        proyectos = enrich_projects_with_status(proyectos)
 
         return {
             "success": True,
@@ -74,10 +72,9 @@ async def get_project(nombre: str):
         req_info = project_manager.get_requirements_info(nombre)
 
         # Análisis completo del proyecto (re-analizar para obtener datos frescos)
-        from pathlib import Path
         project_path = Path(proyecto['ruta'])
         if project_path.exists():
-            analysis = project_manager._analyze_project(project_path)
+            analysis = project_manager.analyze_project(project_path)
         else:
             analysis = None
 
@@ -165,13 +162,12 @@ async def get_project_analysis(nombre: str):
             return {"success": False, "error": "Proyecto no encontrado"}
 
         # Analizar proyecto
-        from pathlib import Path
         project_path = Path(proyecto['ruta'])
 
         if not project_path.exists():
             return {"success": False, "error": "Ruta del proyecto no existe"}
 
-        analysis = project_manager._analyze_project(project_path)
+        analysis = project_manager.analyze_project(project_path)
 
         if not analysis:
             return {"success": False, "error": "No se pudo analizar el proyecto"}

@@ -2,10 +2,14 @@
 Router de Proyectos
 Gestión de proyectos del portfolio
 """
+from pathlib import Path
+import json
+
 from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from config import LOGS_DIR, BASE_DIR
 from core.database import db
 from core.logger import read_logs, logger
 from core.project_manager import project_manager
@@ -74,36 +78,12 @@ async def project_logs(request: Request, nombre: str):
 async def all_logs(request: Request):
     """Vista de todos los logs del sistema"""
     try:
-        from pathlib import Path
-        from config import LOGS_DIR
-        import json
-
-        all_logs = []
-
-        # Leer todos los archivos de log
-        logs_path = Path(LOGS_DIR)
-        if logs_path.exists():
-            for log_file in sorted(logs_path.glob("*.log"), reverse=True):
-                try:
-                    with open(log_file, 'r') as f:
-                        # Leer últimas 100 líneas de cada archivo
-                        lines = f.readlines()[-100:]
-                        for line in lines:
-                            try:
-                                log_entry = json.loads(line.strip())
-                                all_logs.append(log_entry)
-                            except:
-                                pass
-                except Exception as e:
-                    logger.error(f"Error leyendo {log_file}: {str(e)}")
-
-        # Ordenar por timestamp (más recientes primero)
-        all_logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
-        all_logs = all_logs[:500]  # Limitar a 500 logs más recientes
+        # Usar función refactorizada read_logs() sin proyecto específico
+        logs = read_logs(project_name=None, limit=500)
 
         return templates.TemplateResponse("all_logs.html", {
             "request": request,
-            "logs": all_logs
+            "logs": logs
         })
     except Exception as e:
         logger.error(f"Error en vista de todos los logs: {str(e)}")
@@ -114,8 +94,6 @@ async def all_logs(request: Request):
 async def commits_view(request: Request):
     """Vista de historial de commits de ORION"""
     try:
-        from config import BASE_DIR
-
         git_manager = GitManager(str(BASE_DIR))
 
         commits = []

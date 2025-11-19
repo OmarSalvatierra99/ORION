@@ -5,9 +5,9 @@ Gestión completa de proyectos: descubrimiento, control, dependencias
 import subprocess
 import signal
 import psutil
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import json
 
 from config import PORTFOLIO_DIR
 
@@ -37,13 +37,13 @@ class ProjectManager:
             if not project_path.is_dir() or project_path.name.startswith('.'):
                 continue
 
-            project_info = self._analyze_project(project_path)
+            project_info = self.analyze_project(project_path)
             if project_info:
                 projects.append(project_info)
 
         return sorted(projects, key=lambda x: x['nombre'])
 
-    def _analyze_project(self, path: Path) -> Optional[Dict]:
+    def analyze_project(self, path: Path) -> Optional[Dict]:
         """
         Analizar un proyecto y extraer información detallada
 
@@ -110,7 +110,6 @@ class ProjectManager:
             content = main_file.read_text()
 
             # Buscar patrones comunes
-            import re
             patterns = [
                 r'port[=\s]+(\d+)',
                 r'PORT[=\s]+(\d+)',
@@ -140,7 +139,6 @@ class ProjectManager:
         """
         try:
             content = app_file.read_text()
-            import re
 
             analysis = {
                 'endpoints': [],

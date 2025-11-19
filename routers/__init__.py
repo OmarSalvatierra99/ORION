@@ -1,6 +1,6 @@
 """
 ORION Routers
 """
-from . import projects, api
+from . import projects, api, system
 
-__all__ = ['projects', 'api']
+__all__ = ['projects', 'api', 'system']

@@ -1,6 +1,6 @@
 """
-Router de Servicios y Puertos
-Vista de monitoreo de servicios activos y puertos en uso
+Router de Sistema
+Vista de monitoreo de sistema, servicios activos y puertos en uso
 """
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from core.database import db
 from core.logger import logger
 from core.project_manager import project_manager
+from core.project_helpers import enrich_projects_with_status
 from services.system_monitor import (
     SystemMonitor,
     PortMonitor,
@@ -37,16 +38,13 @@ async def services_dashboard(request: Request):
         proyectos = db.list_projects()
 
         # Enriquecer con estado real
+        proyectos = enrich_projects_with_status(proyectos)
+
+        # Separar en activos e inactivos
         active_services = []
         inactive_services = []
 
         for proyecto in proyectos:
-            status = project_manager.get_project_status(
-                proyecto['nombre'],
-                proyecto.get('puerto')
-            )
-            proyecto.update(status)
-
             if proyecto.get('is_running'):
                 active_services.append(proyecto)
             else:
@@ -96,16 +94,13 @@ async def get_services_api():
         proyectos = db.list_projects()
 
         # Enriquecer con estado real
+        proyectos = enrich_projects_with_status(proyectos)
+
+        # Separar en activos e inactivos
         active_services = []
         inactive_services = []
 
         for proyecto in proyectos:
-            status = project_manager.get_project_status(
-                proyecto['nombre'],
-                proyecto.get('puerto')
-            )
-            proyecto.update(status)
-
             if proyecto.get('is_running'):
                 active_services.append(proyecto)
             else:

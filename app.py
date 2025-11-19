@@ -15,9 +15,10 @@ from config import APP_HOST, APP_PORT, APP_TITLE, APP_VERSION, APP_DESCRIPTION
 from core.database import db
 from core.logger import logger, get_logs_summary
 from core.project_manager import project_manager
+from core.project_helpers import enrich_projects_with_status
 
 # Routers
-from routers import projects, api, services
+from routers import projects, api, system
 
 # ==================== APLICACIÓN ====================
 
@@ -34,7 +35,7 @@ templates = Jinja2Templates(directory="templates")
 # Incluir routers
 app.include_router(projects.router)
 app.include_router(api.router)
-app.include_router(services.router)
+app.include_router(system.router)
 
 
 # ==================== STARTUP ====================
@@ -64,12 +65,7 @@ async def dashboard(request: Request):
         proyectos = db.list_projects()
 
         # Enriquecer con estado real
-        for proyecto in proyectos:
-            status = project_manager.get_project_status(
-                proyecto['nombre'],
-                proyecto.get('puerto')
-            )
-            proyecto.update(status)
+        proyectos = enrich_projects_with_status(proyectos)
 
         return templates.TemplateResponse("index.html", {
             "request": request,
